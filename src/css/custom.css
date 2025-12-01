@@ -165,7 +165,7 @@ code {
 }
 
 .content-wrapper {
-  max-width: 80rem;
+  max-width: 70.4rem;
   margin: 0 auto;
   padding-left: max(env(safe-area-inset-left), 1.5rem);
   padding-right: max(env(safe-area-inset-right), 1.5rem);

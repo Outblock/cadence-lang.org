@@ -104,6 +104,24 @@ transaction(stakingPoolId: UInt64, executionEffort: UInt64) {
     }
 }`
 
+const resourceExample = `access(all)
+resource NFT {
+
+    access(all)
+    fun greet(): String {
+        return "I'm NFT #"
+            .concat(self.uuid.toString())
+    }
+}
+
+access(all)
+fun main(): String {
+    let nft <- create NFT()
+    let greeting = nft.greet()
+    destroy nft
+    return greeting
+}`
+
 function cadence(Prism) {
   Prism.languages.cadence = {
     comment: {
@@ -144,15 +162,17 @@ function HomepageHeader() {
 export default function Home() {
   const {siteConfig} = useDocusaurusContext();
   const leftColumnRef = useRef(null);
+  const videoContainerRef = useRef(null);
   const [codeBoxHeight, setCodeBoxHeight] = useState(null);
 
   useLayoutEffect(() => {
     const updateHeight = () => {
-      if (leftColumnRef.current) {
+      if (videoContainerRef.current) {
         // Use requestAnimationFrame to ensure layout is complete
         requestAnimationFrame(() => {
-          if (leftColumnRef.current) {
-            setCodeBoxHeight(leftColumnRef.current.offsetHeight);
+          if (videoContainerRef.current) {
+            // offsetHeight includes padding, which is what we want for the video container
+            setCodeBoxHeight(videoContainerRef.current.offsetHeight);
           }
         });
       }
@@ -162,7 +182,7 @@ export default function Home() {
     updateHeight();
     
     // Also measure after a small delay to catch any async layout changes
-    const timeoutId = setTimeout(updateHeight, 0);
+    const timeoutId = setTimeout(updateHeight, 100);
     
     window.addEventListener('resize', updateHeight);
     return () => {
@@ -179,105 +199,138 @@ export default function Home() {
 
       <div className="content-wrapper">
           <div className="feature" style={{ alignItems: 'flex-start' }}>
-            <div ref={leftColumnRef} style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }}>
-            <Head>
-              <title>Cadence</title>
-            </Head>
-              <Logo title="Cadence" className="logo" width="18em" height="4em" />
-              <h2>
-                Build the future of Consumer DeFi.
-                <br/>
-                The safest, most <strong>composable</strong> language
-                <br/>
-                for <strong>financial applications</strong> that reach millions.
-              </h2>
-
-              <Link className="cta" href="/docs">
-                Get started <HiArrowRight/>
-              </Link>
+            <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '2.5rem' }}>
+              <Head>
+                <title>Cadence</title>
+              </Head>
               
-              <div style={{ 
-                position: 'relative', 
-                paddingBottom: '56.25%', 
-                height: 0, 
-                overflow: 'hidden', 
-                width: '100%', 
-                marginTop: '2rem',
-                flexShrink: 0,
-                borderRadius: '1rem',
-                boxShadow: '1px 2px 4px rgba(45, 45, 45, 0.4)'
-              }}>
-                <iframe
-                  style={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: 0, 
-                    width: '100%', 
-                    height: '100%',
-                    borderRadius: '1rem'
-                  }}
-                  src="https://www.youtube.com/embed/6SE8bvTmmQc?si=DTMmGOHf3wyqIDTF"
-                  title="YouTube video player"
-                  frameborder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerpolicy="strict-origin-when-cross-origin"
-                  allowfullscreen
-                ></iframe>
+              {/* Top row: Logo/heading (left) | Get started button (right) */}
+              <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+                <div ref={leftColumnRef} style={{ display: 'flex', flexDirection: 'column', flex: '0 0 70%', minWidth: 0, gap: '1.5rem' }}>
+                  <Logo title="Cadence" className="logo" width="18em" height="4em" />
+                  <h2 style={{ margin: 0 }}>
+                    Build the future of consumer applications and DeFi.
+                    The safest, most <strong>composable</strong> language
+                    for <strong>onchain experiences</strong> that reach millions.
+                  </h2>
+                </div>
+                <div style={{ flex: '0 0 30%', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
+                  <Link className="cta" href="/docs" style={{ alignSelf: 'flex-start' }}>
+                    Get started <HiArrowRight/>
+                  </Link>
+                </div>
               </div>
-            </div>
 
-            <div style={{
-              maxWidth: "50rem", 
-              minWidth: 0,
-              display: 'flex', 
-              flexDirection: 'column',
-              overflow: 'hidden',
-              height: codeBoxHeight ? `${codeBoxHeight}px` : 0,
-              borderRadius: '1rem',
-              opacity: codeBoxHeight ? 1 : 0,
-              visibility: codeBoxHeight ? 'visible' : 'hidden',
-              transition: codeBoxHeight ? 'opacity 0.15s ease-in' : 'none'
-            }}>
-              <div style={{
-                flex: 1,
-                overflow: 'auto',
-                minHeight: 0,
-                maxHeight: '100%'
-              }}>
-                <SyntaxHighlighter
-                  className="code"
-                  language="cadence"
-                  style={tomorrow}
-                  showLineNumbers={true}
-                >{example}</SyntaxHighlighter>
+              {/* Bottom row: Video (left) | Code sample (right) */}
+              <div style={{ display: 'flex', gap: '2rem', alignItems: 'stretch' }}>
+                <div style={{ flex: '0 0 60%', minWidth: 0 }}>
+                  <div ref={videoContainerRef} style={{ 
+                    position: 'relative', 
+                    paddingBottom: '56.25%', 
+                    height: 0, 
+                    overflow: 'hidden', 
+                    width: '100%', 
+                    borderRadius: '1rem',
+                    boxShadow: '1px 2px 4px rgba(45, 45, 45, 0.4)'
+                  }}>
+                    <iframe
+                      style={{ 
+                        position: 'absolute', 
+                        top: 0, 
+                        left: 0, 
+                        width: '100%', 
+                        height: '100%',
+                        borderRadius: '1rem'
+                      }}
+                      src="https://www.youtube.com/embed/6SE8bvTmmQc?si=DTMmGOHf3wyqIDTF"
+                      title="YouTube video player"
+                      frameborder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen
+                    ></iframe>
+                  </div>
+                </div>
+
+                <div style={{
+                  flex: '0 0 40%',
+                  minWidth: 0,
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  height: codeBoxHeight ? `${codeBoxHeight}px` : 'auto',
+                  borderRadius: '1rem',
+                  opacity: codeBoxHeight ? 1 : 0,
+                  visibility: codeBoxHeight ? 'visible' : 'hidden',
+                  transition: codeBoxHeight ? 'opacity 0.15s ease-in' : 'none',
+                  boxShadow: '1px 2px 4px rgba(45, 45, 45, 0.4)'
+                }}>
+                  <SyntaxHighlighter
+                    className="code"
+                    language="cadence"
+                    style={tomorrow}
+                    showLineNumbers={true}
+                    customStyle={{
+                      margin: 0,
+                      height: '100%',
+                      borderRadius: '1rem'
+                    }}
+                  >{resourceExample}</SyntaxHighlighter>
+                </div>
               </div>
             </div>
           </div>
 
-          <div style={{maxWidth: "80rem", marginTop: "2rem", marginLeft: "auto", marginRight: "auto"}}>
+          <div style={{maxWidth: "70.4rem", marginTop: "2rem", marginLeft: "auto", marginRight: "auto"}}>
             <p>
-              Cadence is powering the next generation of Consumer DeFi, bringing institutional-grade security and consumer-friendly experiences to financial applications that serve millions.
+              Cadence is the best language for digital assets and consumer applications, powering the next generation of Consumer applications and DeFi with institutional-grade security and consumer-friendly experiences that serve millions.
             </p>
             <ul style={{ margin: '1.5rem 0', paddingLeft: '1.5rem' }}>
               <li style={{ marginBottom: '0.75rem' }}>User assets stay in user accounts, delivering better-than-fintech security without centralized risk.</li>
               <li style={{ marginBottom: '0.75rem' }}>Atomic transactions create seamless, one-click experiences that feel native to everyday users.</li>
               <li style={{ marginBottom: '0.75rem' }}>Always-on automation runs 24/7/365, enabling recurring payments and strategies that work while you sleep.</li>
-              <li style={{ marginBottom: '0.75rem' }}>Real-time settlement in seconds, not days, making DeFi faster than traditional financial rails.</li>
-              <li style={{ marginBottom: '0.75rem' }}>Open and composable by design, enabling global financial apps that work together seamlessly.</li>
+              <li style={{ marginBottom: '0.75rem' }}>Real-time settlement in seconds, not days, making onchain applications faster than traditional financial rails.</li>
+              <li style={{ marginBottom: '0.75rem' }}>Open and composable by design, enabling global applications that work together seamlessly.</li>
             </ul>
+            
             <p>
-              Cadence pioneers <a href="https://cadence-lang.org/docs/language/resources">resource-oriented programming</a>—designed specifically to handle valuable digital assets.
-              Unlike traditional smart contract languages where assets are piled in centralized contract storage, Cadence ensures user assets stay in their own accounts. The result is dramatically reduced attack surfaces and the elimination of entire classes of DeFi vulnerabilities.  
+              Cadence pioneers <a href="https://cadence-lang.org/docs/language/resources">resource-oriented programming</a>, designed specifically to handle valuable digital assets.
+              Unlike traditional smart contract languages where assets are piled in centralized contract storage, Cadence ensures user assets stay in their own accounts. The result is dramatically reduced attack surfaces and the elimination of entire classes of vulnerabilities.  
             </p>
             <p>
-              With features like <a href="https://developers.flow.com/blockchain-development-tutorials/forte/flow-actions">Flow Actions</a> and <a href="https://developers.flow.com/blockchain-development-tutorials/forte/scheduled-transactions/scheduled-transactions-introduction">Scheduled Transactions</a>, developers can build sophisticated DeFi experiences that feel native to their users.
+              Supported by network features like <a href="https://developers.flow.com/blockchain-development-tutorials/forte/flow-actions">Flow Actions</a> and <a href="https://developers.flow.com/blockchain-development-tutorials/forte/scheduled-transactions/scheduled-transactions-introduction">Scheduled Transactions</a>, developers can build sophisticated consumer experiences, from DeFi to digital collectibles to onchain games, that feel native to their users.
             </p>
+            <div style={{
+              marginTop: '1.5rem',
+              borderRadius: '1rem',
+              overflow: 'hidden',
+              boxShadow: '1px 2px 4px rgba(45, 45, 45, 0.4)',
+              maxHeight: '28rem',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div style={{
+                overflow: 'auto',
+                flex: 1,
+                minHeight: 0
+              }}>
+                <SyntaxHighlighter
+                  className="code"
+                  language="cadence"
+                  style={tomorrow}
+                  showLineNumbers={false}
+                  customStyle={{
+                    margin: 0,
+                    borderRadius: '1rem',
+                    fontSize: '0.875rem'
+                  }}
+                >{example}</SyntaxHighlighter>
+              </div>
+            </div>
             <p>
-              Ready to build the future of finance? <a href="https://developers.flow.com/blockchain-development-tutorials/cadence/getting-started">Get started today</a>.
+              Ready to build the future of on-chain applications? <a href="https://developers.flow.com/blockchain-development-tutorials/cadence/getting-started">Get started today</a>.
             </p>
           </div>
-
-          <div className='arrow'><HiArrowSmDown/></div>
         </div>
         <div className="features">
           <div className="content-wrapper">
@@ -299,11 +352,29 @@ export default function Home() {
                 </p>
               </div>
               <div>
-               <Lottie animationData={powerAnimation} />
+                <Lottie animationData={powerAnimation} />
               </div>
             </div>
 
             <div className="feature">
+              <div>
+                <h3>Perfect for Consumer Apps, NFTs, and Digital Assets</h3>
+                <p>
+                  Cadence's <a href="https://cadence-lang.org/docs/language/resources">resource-oriented programming</a> makes it the ideal language for consumer applications, NFTs, fungible tokens, and digital collectibles. Resources ensure that digital assets are unique, cannot be duplicated, and are owned directly by users, not stored in contract accounts.
+                </p>
+                <p>
+                  Whether you're building a marketplace for NFTs, creating a gaming ecosystem with in-game assets, or launching a new token standard, Cadence provides the security and composability you need. Resources flow naturally between contracts and users, enabling seamless experiences across the entire ecosystem.
+                </p>
+                <p>
+                  Build consumer applications with confidence. Cadence's type system and resource guarantees make it impossible to accidentally lose or duplicate valuable digital assets, giving users and developers peace of mind.
+                </p>
+              </div>
+              <div>
+                <Lottie animationData={debuggingAnimation} />
+              </div>
+            </div>
+
+            <div className="feature alternate">
               <div>
                 <h3>Built for DeFi Security</h3>
                 <p>
@@ -321,7 +392,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="feature alternate">
+            <div className="feature">
               <div>
                 <h3>Composable DeFi Primitives</h3>
                 <p>
@@ -341,18 +412,18 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="feature">
+            <div className="feature alternate">
               <div>
-                <h3>Learn the Best Language for Consumer DeFi</h3> 
+                <h3>Learn the Best Language for Consumer Applications and DeFi</h3> 
                 <p>
-                  Cadence is purpose-built for consumer DeFi applications. Its intuitive syntax and resource-oriented design make it the ideal language for building financial products that millions of users trust.
+                  Cadence is purpose-built for consumer applications and DeFi. Its intuitive syntax and resource-oriented design make it the ideal language for building financial products that millions of users trust.
                 </p>
                 <p>
                   Learn a language designed from the ground up by smart contract developers for smart contract developers. With comprehensive documentation, powerful testing frameworks, and a supportive community, you'll be building production-ready consumer DeFi apps faster than with traditional smart contract languages.
                 </p>
               </div>
               <div>
-              <Lottie animationData={learnAnimation} />
+                <Lottie animationData={learnAnimation} />
               </div>
             </div>
 
