@@ -3,6 +3,7 @@
 
 # Build output
 /.output
+/.vercel/output
 /dist
 /build
 
