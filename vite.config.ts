@@ -26,6 +26,9 @@ export default defineConfig({
       preset: 'vercel',
       vercel: {
         entryFormat: 'node',
+        functions: {
+          runtime: 'nodejs20.x',
+        },
       },
       externals: {
         external: ['@takumi-rs/core'],
