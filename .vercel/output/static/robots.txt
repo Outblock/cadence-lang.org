@@ -1,8 +1,0 @@
-# algolia: 98E1096D4FD67E70
-
-# Allow all bots by default
-User-agent: *
-Disallow:
-
-# Sitemap
-Sitemap: https://cadence-lang.org/sitemap.xml
