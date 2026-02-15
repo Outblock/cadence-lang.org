@@ -25,18 +25,27 @@ import { LogoLoop, type LogoItem } from '@/components/LogoLoop';
 
 const getHighlightedCode = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const { codeToHtml } = await import('shiki');
-    const cadenceGrammar = (await import('@/lib/cadence.tmLanguage.json'))
-      .default;
-    const html = await codeToHtml(codeExample, {
-      lang: 'cadence',
-      langs: [cadenceGrammar as never],
-      themes: {
-        light: 'github-light',
-        dark: 'github-dark',
-      },
-    });
-    return html;
+    try {
+      const { codeToHtml } = await import('shiki');
+      const cadenceGrammar = (await import('@/lib/cadence.tmLanguage.json'))
+        .default;
+      const html = await codeToHtml(codeExample, {
+        lang: 'cadence',
+        langs: [cadenceGrammar as never],
+        themes: {
+          light: 'github-light',
+          dark: 'github-dark',
+        },
+      });
+      return html;
+    } catch (e) {
+      // Fallback: return pre-formatted code without highlighting
+      const escaped = codeExample
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<pre class="shiki"><code>${escaped}</code></pre>`;
+    }
   },
 );
 
