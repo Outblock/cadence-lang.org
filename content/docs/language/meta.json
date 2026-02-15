@@ -1,0 +1,27 @@
+{
+  "pages": [
+    "...",
+    "access-control",
+    "attachments",
+    "built-in-functions",
+    "capabilities",
+    "constants-and-variables",
+    "contract-updatability",
+    "contracts",
+    "control-flow",
+    "core-events",
+    "crypto",
+    "enumerations",
+    "environment-information",
+    "events",
+    "functions",
+    "imports",
+    "interfaces",
+    "pre-and-post-conditions",
+    "references",
+    "resources",
+    "scope",
+    "syntax",
+    "transactions"
+  ]
+}

@@ -1,0 +1,249 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/* ═══ Geist Fonts ═══ */
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/geist/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Pixel Square';
+  src: url('/fonts/geist/GeistPixel-Square.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Pixel Grid';
+  src: url('/fonts/geist/GeistPixel-Grid.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Pixel Circle';
+  src: url('/fonts/geist/GeistPixel-Circle.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+
+/* Apply Geist globally */
+body {
+  font-family: 'Geist', system-ui, -apple-system, sans-serif;
+}
+code, pre, kbd, samp, .font-mono {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ═══ Cadence brand green ═══ */
+@theme {
+  --color-fd-accent: hsl(153, 82%, 43%);
+  --color-fd-accent-foreground: hsl(0, 0%, 100%);
+  --color-fd-primary: hsl(153, 82%, 38%);
+  --color-fd-primary-foreground: hsl(0, 0%, 100%);
+  --color-fd-ring: hsl(153, 82%, 43%);
+}
+
+.dark {
+  --color-fd-accent: hsl(153, 100%, 47%);
+  --color-fd-accent-foreground: hsl(0, 0%, 0%);
+  --color-fd-primary: hsl(153, 100%, 47%);
+  --color-fd-primary-foreground: hsl(0, 0%, 0%);
+  --color-fd-ring: hsl(153, 100%, 47%);
+}
+
+/* ═══ Hero heading — Geist Pixel for "AI-native" feel ═══ */
+.hero-heading {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+/* Pixel accent — used for display text */
+.pixel-text {
+  font-family: 'Geist Pixel Square', 'Geist', system-ui, sans-serif;
+  font-weight: 500;
+}
+.pixel-grid {
+  font-family: 'Geist Pixel Grid', 'Geist', system-ui, sans-serif;
+  font-weight: 500;
+}
+.pixel-circle {
+  font-family: 'Geist Pixel Circle', 'Geist', system-ui, sans-serif;
+  font-weight: 500;
+}
+
+/* ═══ Gradient text ═══ */
+.gradient-heading {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(135deg, #00D87E 0%, #00EF8B 50%, #00D4AA 100%);
+}
+
+/* ═══ CTA button ═══ */
+.cta {
+  display: inline-flex;
+  padding: 0.625rem 1.5rem;
+  gap: 0.5rem;
+  align-items: center;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #000;
+  background: linear-gradient(180deg, #00EF8B, #00D87E);
+  border-radius: 9999px;
+  box-shadow: 0 1px 3px rgba(0, 41, 87, 0.15), 0 0 0 1px rgba(0, 216, 126, 0.3);
+  transition: all 0.2s ease;
+  user-select: none;
+  letter-spacing: -0.01em;
+}
+.cta:hover {
+  box-shadow: 0 2px 12px -2px rgba(0, 216, 126, 0.3), 0 0 0 1px rgba(0, 216, 126, 0.4);
+  filter: brightness(1.05);
+  color: #000;
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+/* ═══ Shiki dual-theme ═══ */
+.shiki {
+  color: var(--shiki-light) !important;
+  background-color: var(--shiki-light-bg) !important;
+}
+.shiki span {
+  color: var(--shiki-light) !important;
+  background-color: transparent !important;
+}
+.dark .shiki {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: transparent !important;
+}
+
+/* ═══ Hero grid background ═══ */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(0,216,126,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,216,126,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 40%, black 10%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 40%, black 10%, transparent 70%);
+}
+.dark .hero-grid {
+  background-image:
+    linear-gradient(rgba(0,216,126,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,216,126,0.07) 1px, transparent 1px);
+}
+
+/* ═══ Terminal command ═══ */
+.terminal-cmd {
+  background: rgba(0,216,126,0.04);
+  border: 1px solid rgba(0,216,126,0.15);
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.dark .terminal-cmd {
+  background: rgba(0,216,126,0.06);
+  border-color: rgba(0,216,126,0.2);
+}
+.terminal-cmd:hover {
+  border-color: rgba(0,216,126,0.3);
+}
+.terminal-cmd::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,216,126,0.05), transparent);
+  animation: shimmer 5s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* ═══ Glow pulse for pixel text ═══ */
+@keyframes glow-pulse {
+  0%, 100% { text-shadow: 0 0 8px rgba(0,216,126,0.3); }
+  50% { text-shadow: 0 0 20px rgba(0,216,126,0.6), 0 0 40px rgba(0,216,126,0.2); }
+}
+.glow-text {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* ═══ Section label — pixel font with dot leader ═══ */
+.section-label {
+  font-family: 'Geist Pixel Square', 'Geist', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #00D87E;
+}
+
+/* ═══ Pixel decorative number / ordinal ═══ */
+.pixel-ordinal {
+  font-family: 'Geist Pixel Grid', 'Geist', system-ui, sans-serif;
+  font-weight: 500;
+  color: rgba(0,216,126,0.25);
+  font-size: 3rem;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ═══ Typing cursor blink ═══ */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.typing-cursor::after {
+  content: '▋';
+  color: #00D87E;
+  animation: cursor-blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+/* ═══ Scanline overlay for retro-digital feel ═══ */
+.scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,216,126,0.015) 2px,
+    rgba(0,216,126,0.015) 4px
+  );
+  pointer-events: none;
+}
+
+/* ═══ Pixel tag / badge ═══ */
+.pixel-tag {
+  font-family: 'Geist Pixel Square', 'Geist', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(0,216,126,0.1);
+  color: #00D87E;
+}
+
