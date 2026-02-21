@@ -116,7 +116,31 @@ function Page() {
   const data = useFumadocsLoader(Route.useLoaderData());
 
   return (
-    <DocsLayout {...baseOptions()} tree={data.pageTree}>
+    <DocsLayout
+      {...baseOptions()}
+      tree={data.pageTree}
+      sidebar={{
+        footer: (
+          <div className="border-t border-fd-border pt-2 pb-1 px-2">
+            <p className="text-[10px] font-mono text-fd-muted-foreground uppercase tracking-widest mb-1 px-1 opacity-60">
+              For AI
+            </p>
+            <a
+              href="/llms.txt"
+              className="flex items-center gap-2 px-2 py-1 rounded text-xs font-mono text-fd-muted-foreground hover:text-fd-primary hover:bg-fd-accent/50 transition-colors"
+            >
+              llms.txt
+            </a>
+            <a
+              href="/llms-full.txt"
+              className="flex items-center gap-2 px-2 py-1 rounded text-xs font-mono text-fd-muted-foreground hover:text-fd-primary hover:bg-fd-accent/50 transition-colors"
+            >
+              llms-full.txt
+            </a>
+          </div>
+        ),
+      }}
+    >
       <Suspense>
         {clientLoader.useContent(data.path, {
           className: '',
