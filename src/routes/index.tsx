@@ -99,10 +99,6 @@ function Home() {
 
             {/* Left Column: Copy & CTA */}
             <div className="flex flex-col items-start text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-md mb-8 hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer text-xs font-mono">
-                <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
-                Agent Core v1.0 is Live
-              </div>
 
               <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-8">
                 The Safest, Most <br className="md:hidden" />
@@ -113,12 +109,37 @@ function Home() {
                 Language for Web3.
               </h1>
 
-              <p className="max-w-xl text-lg md:text-xl text-neutral-600 dark:text-[#888] leading-relaxed mb-12">
-                Build the future of consumer applications and DeFi. The safest, most composable language for onchain experiences that reach millions.
+              <p className="max-w-xl text-lg md:text-xl text-neutral-600 dark:text-[#888] leading-relaxed mb-4">
+                Built for AI-native development. Cadence gives AI agents and human developers the same first-class primitives — resource ownership, capability-based security, and composable contracts — natively understood through MCP and skills.
               </p>
 
-              {/* Install Command - The primary CTA */}
-              <div className="relative w-full max-w-lg mb-12 group">
+              <div className="flex items-center gap-3 mb-8">
+                <a
+                  href="https://skills.sh"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-mono text-[var(--accent)] hover:underline underline-offset-4"
+                >
+                  skills.sh
+                </a>
+                <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                <a
+                  href="/llms.txt"
+                  className="text-xs font-mono text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline underline-offset-4"
+                >
+                  llms.txt
+                </a>
+                <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                <a
+                  href="/llms-full.txt"
+                  className="text-xs font-mono text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline underline-offset-4"
+                >
+                  llms-full.txt
+                </a>
+              </div>
+
+              {/* Install Skill Command - The primary CTA */}
+              <div className="relative w-full max-w-lg mb-2 group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)]/30 to-blue-500/30 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
                 <div className="relative flex items-center justify-between bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl p-2 pl-6 shadow-2xl overflow-hidden backdrop-blur-xl transition-colors duration-300">
                   <div className="flex items-center gap-3 font-mono text-sm sm:text-base">
@@ -142,6 +163,9 @@ function Home() {
                   </button>
                 </div>
               </div>
+              <p className="text-xs text-neutral-400 dark:text-neutral-600 font-mono mb-10">
+                Install the Cadence skill for your AI coding agent
+              </p>
 
               <div className="flex flex-wrap items-center gap-6">
                 <Link
