@@ -5,7 +5,10 @@ export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
       title: (
-        <img src="/img/logo.svg" alt="Cadence" style={{ height: '2rem' }} />
+        <div className="flex items-center">
+          <img src="/img/logo.svg" alt="Cadence" className="h-8 block dark:hidden" />
+          <img src="/img/logo-dark.svg" alt="Cadence" className="h-8 hidden dark:block" />
+        </div>
       ),
     },
     themeSwitch: {
@@ -23,6 +26,7 @@ export function baseOptions(): BaseLayoutProps {
       { text: 'Language Reference', url: '/docs/language' },
       {
         type: 'icon',
+        text: 'GitHub',
         url: 'https://github.com/onflow/cadence',
         icon: (
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
@@ -33,6 +37,7 @@ export function baseOptions(): BaseLayoutProps {
       },
       {
         type: 'icon',
+        text: 'Discord',
         url: 'https://discord.com/invite/J6fFnh2xx6',
         icon: (
           <svg viewBox="0 0 16 16" fill="currentColor" width="20" height="20">

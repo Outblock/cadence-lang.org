@@ -1,686 +1,408 @@
-import React from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { HomeLayout } from 'fumadocs-ui/layouts/home';
-import { baseOptions } from '@/lib/layout.shared';
+import React, { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { HomeLayout } from "fumadocs-ui/layouts/home";
+import { baseOptions } from "@/lib/layout.shared";
 import {
-  Shield,
-  Blocks,
-  Zap,
-  Lock,
-  BookOpen,
   ArrowRight,
-  Layers,
-  FileText,
-  Server,
+  Terminal,
+  Cpu,
+  ShieldCheck,
+  Zap,
+  Box,
+  ChevronRight,
+  Github,
   Copy,
   Check,
-  Brain,
-  Cpu,
-  Quote,
-  ExternalLink,
-} from 'lucide-react';
-import StickerPeel from '@/components/StickerPeel';
-import { LogoLoop, type LogoItem } from '@/components/LogoLoop';
+} from "lucide-react";
+import { MorphingAscii } from "@/components/MorphingAscii";
 
-const getHighlightedCode = createServerFn({ method: 'GET' }).handler(
+// ════════ DATA ════════
+const corePillars = [
+  {
+    title: "Resource Oriented",
+    label: "SAFETY",
+    desc: "Assets live in account storage as first-class objects. They cannot be lost, duplicated, or forgotten. The type system enforces physical-world scarcity.",
+  },
+  {
+    title: "Capabilities",
+    label: "ACCESS",
+    desc: "Security via object-capabilities. Authority is granted by holding a reference to a resource, removing the need for error-prone permission lists.",
+  },
+  {
+    title: "AI Optimized",
+    label: "CONTEXT",
+    desc: "Standardized MCP servers and llms.txt allow AI agents to understand your contracts with zero hallucination. Built for the era of autonomous coding.",
+  },
+];
+
+const codeSnippet = `// The system enforces ownership
+access(all) resource NFT {
+    access(all) let id: UInt64
+    init() { self.id = self.uuid }
+}
+
+// Moves are explicit and safe
+access(all) fun transfer(token: @NFT) {
+    // '@' denotes a resource that MUST be handled
+    Receiver.deposit(token: <- token)
+}`;
+
+// ════════ HIGHLIGHTER ════════
+const getHighlightedCode = createServerFn({ method: "GET" }).handler(
   async () => {
     try {
-      const { codeToHtml } = await import('shiki');
-      const cadenceGrammar = (await import('@/lib/cadence.tmLanguage.json'))
+      const { codeToHtml } = await import("shiki");
+      const cadenceGrammar = (await import("@/lib/cadence.tmLanguage.json"))
         .default;
-      const html = await codeToHtml(codeExample, {
-        lang: 'cadence',
+      return await codeToHtml(codeSnippet, {
+        lang: "cadence",
+        // @ts-expect-error type mismatches but custom lang works
         langs: [cadenceGrammar as never],
-        themes: {
-          light: 'github-light',
-          dark: 'github-dark',
-        },
+        theme: "github-dark",
       });
-      return html;
     } catch (e) {
-      // Fallback: return pre-formatted code without highlighting
-      const escaped = codeExample
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      return `<pre class="shiki"><code>${escaped}</code></pre>`;
+      return `<pre><code>${codeSnippet}</code></pre>`;
     }
   },
 );
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: Home,
   loader: () => getHighlightedCode(),
-  head: () => ({
-    meta: [
-      { title: 'Cadence - The Smart Contract Language for Flow' },
-      {
-        name: 'description',
-        content:
-          'Cadence is a resource-oriented programming language for building secure smart contracts on Flow.',
-      },
-    ],
-  }),
 });
 
-const codeExample = `// Resources: assets that can't be copied or lost
-access(all)
-resource NFT {
-    access(all) let id: UInt64
-    access(all) let metadata: {String: String}
-
-    init(metadata: {String: String}) {
-        self.id = self.uuid
-        self.metadata = metadata
-    }
-}
-
-// Mint and transfer — ownership is enforced by the type system
-access(all)
-fun mint(): @NFT {
-    return <- create NFT(metadata: {"name": "Rare Collectible"})
-}
-
-access(all)
-fun transfer(token: @NFT, to: &{Collection}) {
-    to.deposit(token: <- token)
-    // 'token' no longer exists here — guaranteed by Cadence
-}`;
-
-const orgJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'Cadence',
-  url: 'https://cadence-lang.org',
-  logo: 'https://cadence-lang.org/img/logo.svg',
-  sameAs: [
-    'https://github.com/onflow/cadence',
-    'https://discord.com/invite/J6fFnh2xx6',
-  ],
-};
-
-const features = [
-  {
-    icon: Shield,
-    title: 'Resource-Oriented',
-    desc: 'Digital assets are first-class types that can\'t be copied or lost.',
-    span: 'md:col-span-1',
-  },
-  {
-    icon: Lock,
-    title: 'Secure by Design',
-    desc: 'Capability-based access control and built-in pre/post conditions.',
-    span: 'md:col-span-1',
-  },
-  {
-    icon: Zap,
-    title: 'Atomic Transactions',
-    desc: 'Multi-contract interactions. All succeed or all revert.',
-    span: 'md:col-span-1',
-  },
-  {
-    icon: Blocks,
-    title: 'Composable',
-    desc: 'Interfaces, attachments, and resources flow between contracts.',
-    span: 'md:col-span-1',
-  },
-  {
-    icon: Layers,
-    title: 'Account-Centric',
-    desc: 'Assets live in user accounts, not contract storage.',
-    span: 'md:col-span-1',
-  },
-  {
-    icon: BookOpen,
-    title: 'Developer Friendly',
-    desc: 'Swift/Rust-inspired syntax, testing framework, and playground.',
-    span: 'md:col-span-1',
-  },
-];
-
-const aiToolLogos: LogoItem[] = [
-  {
-    node: (
-      <span className="inline-flex items-center gap-2 text-fd-foreground/70 font-medium whitespace-nowrap text-sm">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#D97757"/><path d="M6 13.5c1.5-3 3-4 5-6.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
-        Claude Code
-      </span>
-    ),
-    href: 'https://docs.anthropic.com/en/docs/claude-code',
-    title: 'Claude Code',
-  },
-  {
-    node: (
-      <span className="inline-flex items-center gap-2 text-fd-foreground/70 font-medium whitespace-nowrap text-sm">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="5" fill="currentColor" opacity="0.8"/><path d="M7 6l7 4-7 4z" fill="var(--color-fd-background, #fff)"/></svg>
-        Cursor
-      </span>
-    ),
-    href: 'https://cursor.com',
-    title: 'Cursor',
-  },
-  {
-    node: (
-      <span className="inline-flex items-center gap-2 text-fd-foreground/70 font-medium whitespace-nowrap text-sm">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#10A37F"/><path d="M7 10h6M10 7v6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
-        ChatGPT
-      </span>
-    ),
-    href: 'https://chatgpt.com',
-    title: 'ChatGPT',
-  },
-  {
-    node: (
-      <span className="inline-flex items-center gap-2 text-fd-foreground/70 font-medium whitespace-nowrap text-sm">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="5" fill="#0EA5E9"/><path d="M6 14c3-6 5-4 8-10" stroke="#fff" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
-        Windsurf
-      </span>
-    ),
-    href: 'https://windsurf.com',
-    title: 'Windsurf',
-  },
-  {
-    node: (
-      <span className="inline-flex items-center gap-2 text-fd-foreground/70 font-medium whitespace-nowrap text-sm">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="10" fill="#6366F1"/><circle cx="8" cy="10" r="2" fill="#fff"/><circle cx="13" cy="10" r="2" fill="#fff"/></svg>
-        Copilot
-      </span>
-    ),
-    href: 'https://github.com/features/copilot',
-    title: 'GitHub Copilot',
-  },
-  {
-    node: (
-      <span className="inline-flex items-center gap-2 text-fd-foreground/70 font-medium whitespace-nowrap text-sm">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="5" fill="#F59E0B"/><path d="M10 4v12M4 10h12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
-        skills.sh
-      </span>
-    ),
-    href: 'https://skills.sh',
-    title: 'skills.sh',
-  },
-];
-
-const skills = [
-  {
-    name: 'cadence-fundamentals',
-    desc: 'Complete language reference — resources, capabilities, transactions, contracts, account storage.',
-    tag: 'Language',
-  },
-  {
-    name: 'cadence-token-development',
-    desc: 'Build NFTs and fungible tokens — collection patterns, minting, transfers, Flow standards.',
-    tag: 'Tokens',
-  },
-  {
-    name: 'cadence-best-practices',
-    desc: 'Security rules, design patterns, anti-patterns, and testing for production code.',
-    tag: 'Security',
-  },
-];
-
-function ClientOnly({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
-  return <>{children}</>;
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = React.useState(false);
-  return (
-    <button
-      className="ml-auto p-1 rounded text-fd-muted-foreground/50 hover:text-fd-muted-foreground transition-colors"
-      onClick={(e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }}
-      aria-label="Copy command"
-    >
-      {copied ? (
-        <Check className="w-4 h-4 text-[#00D87E]" />
-      ) : (
-        <Copy className="w-4 h-4" />
-      )}
-    </button>
-  );
-}
-
-const projects = [
-  {
-    name: 'NBA Top Shot',
-    desc: 'Officially licensed NBA digital collectibles — 21M+ moments sold.',
-    url: 'https://nbatopshot.com',
-  },
-  {
-    name: 'NFL ALL DAY',
-    desc: 'NFL-licensed video moment NFTs on Flow, powered by Cadence.',
-    url: 'https://nflallday.com',
-  },
-  {
-    name: 'UFC Strike',
-    desc: 'Official UFC digital collectibles bringing MMA moments on-chain.',
-    url: 'https://ufcstrike.com',
-  },
-  {
-    name: 'Dapper Wallet',
-    desc: 'Consumer-friendly crypto wallet powering millions of Flow accounts.',
-    url: 'https://meetdapper.com',
-  },
-];
-
-const testimonials = [
-  {
-    quote: "Cadence's resource-oriented model makes it literally impossible to accidentally duplicate or lose digital assets. This is how smart contract languages should work.",
-    author: 'Dieter Shirley',
-    role: 'CTO, Dapper Labs & creator of ERC-721',
-    avatar: 'DS',
-  },
-  {
-    quote: "After writing Solidity for years, Cadence feels like a breath of fresh air. The type system catches bugs at compile time that would be exploits on other chains.",
-    author: 'Andrea Muttoni',
-    role: 'Developer Relations, Flow',
-    avatar: 'AM',
-  },
-  {
-    quote: "We shipped NBA Top Shot handling millions of transactions. Cadence's safety guarantees let us move fast without worrying about reentrancy or overflow exploits.",
-    author: 'Layne Lafrance',
-    role: 'Engineering Lead, Dapper Labs',
-    avatar: 'LL',
-  },
-];
-
-const SKILLS_ORG = import.meta.env.VITE_SKILLS_ORG || 'onflow';
-const SKILLS_CMD = `npx skills add ${SKILLS_ORG}/cadence-lang.org`;
+// ════════ COMPONENTS ════════
 
 function Home() {
   const highlightedCode = Route.useLoaderData();
+  const [copied, setCopied] = useState(false);
+
+  const copyCommand = () => {
+    navigator.clipboard.writeText("npx skills add outblock/cadence-lang.org");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <HomeLayout {...baseOptions()}>
-      <div className="relative">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
-        />
+      <div className="relative min-h-screen bg-[#FAFAFA] dark:bg-black text-neutral-900 dark:text-white selection:bg-[var(--accent)] selection:text-black font-sans transition-colors duration-300">
+        {/* Subtle Grid Background */}
+        <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
-        {/* Draggable stickers */}
-        <div className="hidden md:block">
-          <StickerPeel
-            imageSrc="/img/cadence-icon.svg"
-            width={120}
-            rotate={-12}
-            peelDirection={45}
-            initialPosition={{ x: 80, y: 160 }}
-          />
-          <StickerPeel
-            imageSrc="/img/flow-icon.svg"
-            width={100}
-            rotate={15}
-            peelDirection={135}
-            initialPosition={{ x: -200, y: 220 }}
-          />
-        </div>
+        {/* Glow effect at top */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-[#00FF94]/10 rounded-full blur-[120px] pointer-events-none" />
 
         {/* ════════ HERO ════════ */}
-        <section className="relative overflow-hidden">
-          {/* Grid background */}
-          <div className="hero-grid absolute inset-0 pointer-events-none" />
-          {/* Scanline overlay */}
-          <div className="scanlines absolute inset-0" />
-          {/* Glow orbs */}
-          <div className="absolute top-[-20%] left-[20%] w-[40rem] h-[40rem] rounded-full bg-[#00D87E]/[0.04] blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-[-10%] right-[10%] w-[30rem] h-[30rem] rounded-full bg-[#00EF8B]/[0.03] blur-[100px] pointer-events-none" />
+        <section className="relative pt-32 pb-24 px-6 overflow-hidden flex flex-col justify-center min-h-[90vh]">
+          <div className="max-w-7xl mx-auto w-full z-10 grid lg:grid-cols-2 gap-12 items-center">
 
-          <div className="relative max-w-5xl mx-auto px-6 pt-24 pb-8 text-center">
-            <p className="pixel-text text-[#00D87E] text-lg md:text-xl tracking-wider mb-8 glow-text">
-              AI-NATIVE WEB3 LANGUAGE
-            </p>
-            <h1 className="hero-heading text-5xl md:text-6xl lg:text-7xl leading-[1.08]">
-              Write Web3.<br />
-              <span className="gradient-heading">Ship with AI.</span>
-            </h1>
-            <p className="text-base md:text-lg text-fd-muted-foreground max-w-xl mx-auto mt-6 leading-relaxed tracking-tight">
-              Resource-oriented smart contracts on Flow.
-              Skills, MCP, and llms.txt — your agent writes production Cadence from day one.
-            </p>
+            {/* Left Column: Copy & CTA */}
+            <div className="flex flex-col items-start text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-md mb-8 hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer text-xs font-mono">
+                <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
+                Agent Core v1.0 is Live
+              </div>
 
-            {/* Terminal */}
-            <div className="max-w-lg mx-auto mt-10">
-              <div className="terminal-cmd group">
-                <div className="flex items-center gap-3 relative z-10">
-                  <span className="text-[#00D87E]/60 select-none">$</span>
-                  <code className="text-fd-foreground text-sm md:text-base typing-cursor">
-                    <span className="text-fd-muted-foreground">npx</span>{' '}
-                    <span className="text-[#00D87E] font-semibold">skills add</span>{' '}
-                    <span className="font-medium">{SKILLS_ORG}/cadence-lang.org</span>
-                  </code>
-                  <CopyButton text={SKILLS_CMD} />
+              <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-8">
+                The Safest, Most <br className="md:hidden" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent)] to-blue-500">
+                  Composable
+                </span>
+                <br />
+                Language for Web3.
+              </h1>
+
+              <p className="max-w-xl text-lg md:text-xl text-neutral-600 dark:text-[#888] leading-relaxed mb-12">
+                Build the future of consumer applications and DeFi. The safest, most composable language for onchain experiences that reach millions.
+              </p>
+
+              {/* Install Command - The primary CTA */}
+              <div className="relative w-full max-w-lg mb-12 group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)]/30 to-blue-500/30 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
+                <div className="relative flex items-center justify-between bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl p-2 pl-6 shadow-2xl overflow-hidden backdrop-blur-xl transition-colors duration-300">
+                  <div className="flex items-center gap-3 font-mono text-sm sm:text-base">
+                    <span className="text-neutral-400 dark:text-[#666] select-none">$</span>
+                    <span className="text-neutral-900 dark:text-white font-medium">
+                      npx skills add{" "}
+                      <span className="text-green-600 dark:text-[var(--accent)]">
+                        outblock/cadence-lang.org
+                      </span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={copyCommand}
+                    className="p-3 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors text-neutral-500 dark:text-[#888] hover:text-black dark:hover:text-white"
+                  >
+                    {copied ? (
+                      <Check className="w-5 h-5 text-[var(--accent)]" />
+                    ) : (
+                      <Copy className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-6">
+                <Link
+                  to="/docs/$"
+                  className="h-12 px-6 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-black font-medium flex items-center gap-2 hover:bg-neutral-800 dark:hover:bg-gray-200 transition-colors"
+                >
+                  Read the Docs <ArrowRight className="w-4 h-4" />
+                </Link>
+                <a
+                  href="https://github.com/onflow/cadence"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-12 px-6 rounded-lg bg-black/5 dark:bg-white/5 text-neutral-900 dark:text-white font-medium flex items-center gap-2 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors"
+                >
+                  <Github className="w-4 h-4" /> GitHub
+                </a>
               </div>
             </div>
 
-            {/* CTA */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-              <Link to="/docs/$" params={{ _splat: '' }} className="cta">
-                Get started <ArrowRight className="w-4 h-4" />
-              </Link>
-              <a
-                href="https://play.flow.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-fd-border text-fd-foreground font-medium text-sm hover:bg-fd-muted transition-colors"
-              >
-                Playground
-              </a>
+            {/* Right Column: Animation */}
+            <div className="relative flex items-center justify-center lg:justify-end">
+              <MorphingAscii />
             </div>
-          </div>
 
-          {/* Logo ticker */}
-          <div className="relative max-w-3xl mx-auto pb-16 mt-4">
-            <ClientOnly>
-              <LogoLoop
-                logos={aiToolLogos}
-                speed={30}
-                logoHeight={20}
-                gap={40}
-                pauseOnHover
-                fadeOut
-                scaleOnHover
-                ariaLabel="Compatible AI tools"
-              />
-            </ClientOnly>
           </div>
         </section>
 
-        {/* ════════ CODE SHOWCASE ════════ */}
-        <section className="border-t border-fd-border">
-          <div className="max-w-5xl mx-auto px-6 py-20">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="section-label">01 — Language</span>
-              <span className="flex-1 h-px bg-fd-border" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2">
-              Resources you can reason about
-            </h2>
-            <p className="text-fd-muted-foreground mb-8 max-w-2xl">
-              Cadence makes digital assets first-class citizens. Ownership is enforced by the type system — assets can't be copied, lost, or accidentally destroyed.
-            </p>
-
-            {/* Code block — full width */}
-            <div className="rounded-2xl border border-fd-border overflow-hidden bg-fd-card">
-              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-fd-border bg-fd-muted/40">
-                <div className="flex gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-400/60" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/60" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-400/60" />
-                </div>
-                <span className="text-xs text-fd-muted-foreground ml-2 font-mono">
-                  NFT.cdc
-                </span>
-                <span className="pixel-tag ml-auto">Cadence</span>
-              </div>
-              <div
-                className="overflow-auto [&_pre]:p-5 [&_pre]:text-[13px] [&_pre]:leading-relaxed [&_pre]:m-0 [&_pre]:max-h-[24rem]"
-                dangerouslySetInnerHTML={{ __html: highlightedCode }}
-              />
-            </div>
-
-            {/* Feature grid — clean 3-col */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 mt-12">
-              {features.map((f) => (
-                <div key={f.title} className="flex items-start gap-3">
-                  <div className="rounded-lg bg-fd-primary/10 p-2 shrink-0">
-                    <f.icon className="w-4 h-4 text-fd-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">{f.title}</h3>
-                    <p className="text-xs text-fd-muted-foreground leading-relaxed mt-0.5">
-                      {f.desc}
+        {/* ════════ BORDERED SECTION ════════ */}
+        <section className="relative py-24 px-6 z-10">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid lg:grid-cols-12 gap-16">
+              <div className="lg:col-span-4 space-y-12">
+                <h3 className="text-2xl font-bold border-b border-black/10 dark:border-white/10 pb-4">
+                  Architectural Pillars
+                </h3>
+                {corePillars.map((p, i) => (
+                  <div key={i} className="group">
+                    <div className="text-[10px] font-mono text-green-600 dark:text-[var(--accent)] mb-2 opacity-80 dark:opacity-50 group-hover:opacity-100 transition-opacity">
+                      {p.label}
+                    </div>
+                    <h4 className="text-xl font-bold mb-3">{p.title}</h4>
+                    <p className="text-sm text-neutral-600 dark:text-[#888] leading-relaxed">
+                      {p.desc}
                     </p>
                   </div>
+                ))}
+              </div>
+
+              <div className="lg:col-span-8">
+                <div className="border border-black/10 dark:border-white/10 bg-white dark:bg-[#0A0A0A] rounded-xl overflow-hidden shadow-2xl">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-neutral-50 dark:bg-[#111]">
+                    <div className="flex gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                      <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                    </div>
+                    <span className="font-mono text-xs text-neutral-500 dark:text-[#888]">
+                      Resource_Interface.cdc
+                    </span>
+                  </div>
+                  <div
+                    className="p-6 overflow-auto text-sm [&>pre]:!bg-transparent"
+                    dangerouslySetInnerHTML={{ __html: highlightedCode }}
+                  />
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ════════ AI TOOLKIT ════════ */}
-        <section className="border-t border-fd-border bg-fd-muted/20">
-          <div className="max-w-6xl mx-auto px-6 py-20">
-            {/* Section label */}
-            <div className="flex items-center gap-3 mb-8">
-              <span className="section-label">02 — AI Toolkit</span>
-              <span className="flex-1 h-px bg-fd-border" />
-            </div>
-
-            <div className="flex items-center gap-3 mb-2">
-              <Brain className="w-6 h-6 text-[#00D87E]" />
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                Built for Agents
+        {/* ════════ PARADIGM SHIFT ════════ */}
+        <section className="relative py-32 px-6 bg-black/[0.02] dark:bg-white/[0.01] border-t border-black/5 dark:border-white/5">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-20">
+              <span className="text-green-600 dark:text-[var(--accent)] font-mono text-xs tracking-widest uppercase mb-4 block">
+                The Paradigm Shift
+              </span>
+              <h2 className="text-4xl md:text-5xl font-bold">
+                LEDGER VS. RESOURCES
               </h2>
             </div>
-            <p className="text-fd-muted-foreground mb-10 max-w-xl">
-              Everything your AI agent needs to write, audit, and deploy Cadence — no fine-tuning required.
-            </p>
 
-            {/* Bento grid */}
-            <div className="grid md:grid-cols-3 gap-4 mb-8">
-              {/* Skills — spans 2 cols */}
-              <div className="md:col-span-2 rounded-2xl border border-fd-border bg-fd-card p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Cpu className="w-5 h-5 text-[#00D87E]" />
-                  <h3 className="font-semibold">Agent Skills</h3>
-                  <span className="pixel-tag ml-auto">3 skills</span>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-[#0A0A0A] border border-black/10 dark:border-white/10 rounded-2xl p-10 hover:border-black/20 dark:hover:border-white/20 transition-colors shadow-sm dark:shadow-none">
+                <div className="flex items-center gap-3 mb-8 opacity-40">
+                  <div className="w-4 h-4 rounded-sm border border-neutral-800 dark:border-white" />
+                  <span className="text-xs font-mono uppercase tracking-widest">
+                    The Old Way (Ledger)
+                  </span>
                 </div>
-                <div className="grid sm:grid-cols-3 gap-3">
-                  {skills.map((s) => (
-                    <div key={s.name} className="rounded-xl bg-fd-muted/50 p-4 hover:bg-fd-muted transition-colors cursor-pointer">
-                      <span className="pixel-tag">{s.tag}</span>
-                      <p className="font-mono text-xs font-semibold mt-2 mb-1">{s.name}</p>
-                      <p className="text-[11px] text-fd-muted-foreground leading-snug">{s.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* MCP Server */}
-              <div className="rounded-2xl border border-fd-border bg-fd-card p-6 flex flex-col">
-                <Server className="w-8 h-8 text-[#00D87E] mb-3" />
-                <h3 className="font-semibold mb-1">MCP Server</h3>
-                <span className="pixel-tag w-fit mb-3">Protocol</span>
-                <p className="text-xs text-fd-muted-foreground mb-4 flex-1">
-                  Connect any MCP-compatible client to search and query Cadence docs.
+                <h4 className="text-2xl font-bold mb-4">
+                  Centralized Accounting
+                </h4>
+                <p className="text-neutral-600 dark:text-[#666] leading-relaxed mb-8">
+                  Assets are just entries in a contract's private dictionary. To
+                  move value, you update two numbers. This "ledger" model is
+                  prone to reentrancy bugs.
                 </p>
-                <code className="text-xs bg-fd-muted rounded-lg px-3 py-2 font-mono text-fd-muted-foreground block">
-                  npx cadence-lang-mcp-server
-                </code>
+                <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-lg font-mono text-sm text-red-400/60 leading-relaxed">
+                  mapping(address ={">"} uint) balances;
+                  <br />
+                  function transfer(address to, uint val) {"{"} <br />
+                  &nbsp;&nbsp;balances[msg.sender] -= val;
+                  <br />
+                  &nbsp;&nbsp;balances[to] += val;
+                  <br />
+                  {"}"}
+                </div>
               </div>
-            </div>
 
-            {/* Bottom row */}
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="rounded-2xl border border-fd-border bg-fd-card p-6">
-                <FileText className="w-8 h-8 text-[#00D87E] mb-3" />
-                <h3 className="font-semibold mb-1">llms.txt</h3>
-                <span className="pixel-tag w-fit mb-3">Context</span>
-                <p className="text-xs text-fd-muted-foreground mb-3">
-                  Machine-readable doc index. Feed entire docs to any LLM.
+              <div className="bg-white dark:bg-[#0A0A0A] border border-green-500/20 dark:border-[var(--accent)]/20 rounded-2xl p-10 relative overflow-hidden shadow-sm dark:shadow-none">
+                <div className="absolute top-0 right-0 p-6">
+                  <Zap className="w-6 h-6 text-green-600/50 dark:text-[var(--accent)]/50" />
+                </div>
+                <div className="flex items-center gap-3 mb-8 text-green-600 dark:text-[var(--accent)]">
+                  <Box className="w-4 h-4" />
+                  <span className="text-xs font-mono uppercase tracking-widest">
+                    The Cadence Way
+                  </span>
+                </div>
+                <h4 className="text-2xl font-bold mb-4 text-neutral-900 dark:text-white">
+                  Direct Ownership
+                </h4>
+                <p className="text-neutral-600 dark:text-[#888] leading-relaxed mb-8">
+                  Assets are objects stored directly in the user's account. To
+                  move value, you physically move the object. Impossible to
+                  duplicate.
                 </p>
-                <div className="flex flex-col gap-1.5">
-                  <code className="text-xs bg-fd-muted rounded-lg px-3 py-2 font-mono text-fd-muted-foreground block">
-                    curl cadence-lang.org/llms.txt
-                  </code>
-                  <code className="text-xs bg-fd-muted rounded-lg px-3 py-2 font-mono text-fd-muted-foreground block">
-                    curl cadence-lang.org/llms-full.txt
-                  </code>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-fd-border bg-fd-card p-6">
-                <Copy className="w-8 h-8 text-[#00D87E] mb-3" />
-                <h3 className="font-semibold mb-1">Per-Page AI Actions</h3>
-                <span className="pixel-tag w-fit mb-3">Export</span>
-                <p className="text-xs text-fd-muted-foreground mb-3">
-                  Every doc page has one-click export to your AI tool of choice.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { label: 'Copy MD', color: 'bg-fd-muted' },
-                    { label: 'ChatGPT', color: 'bg-[#10A37F]/10 text-[#10A37F]' },
-                    { label: 'Claude', color: 'bg-[#D97757]/10 text-[#D97757]' },
-                    { label: 'Cursor', color: 'bg-fd-muted' },
-                  ].map((a) => (
-                    <span key={a.label} className={`text-[11px] font-medium rounded-md px-2.5 py-1 ${a.color}`}>
-                      {a.label}
-                    </span>
-                  ))}
+                <div className="p-6 bg-[var(--accent)]/5 border border-[var(--accent)]/20 rounded-lg font-mono text-sm text-[var(--accent)]/80 leading-relaxed">
+                  let vault {"<-"} account.withdraw(amount: 10.0)
+                  <br />
+                  receiver.deposit(vault: {"<-"} vault)
+                  <br />
+                  <span className="text-white/40 mt-2 block">
+                    // vault is now empty, reentrancy impossible
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </section>
-
-        {/* ════════ SOCIAL PROOF ════════ */}
-        <section className="border-t border-fd-border">
-          <div className="max-w-5xl mx-auto px-6 py-20">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="section-label">03 — Production</span>
-              <span className="flex-1 h-px bg-fd-border" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2">
-              Trusted at scale
+        {/* ════════ VIDEO PRESENTATION ════════ */}
+        <section className="relative py-24 px-6 z-10 border-t border-black/5 dark:border-white/5 bg-black/5 dark:bg-black/50">
+          <div className="text-center mb-16">
+            <span className="text-green-600 dark:text-[var(--accent)] font-mono text-xs tracking-widest uppercase mb-4 block">
+              Watch The Intro
+            </span>
+            <h2 className="text-3xl md:text-5xl font-bold">
+              BUILT FOR CONSUMER APPS & DEFI
             </h2>
-            <p className="text-fd-muted-foreground mb-10 max-w-2xl">
-              Cadence powers some of the largest consumer blockchain applications — from sports collectibles to digital wallets with millions of users.
-            </p>
+          </div>
+          <div className="max-w-5xl mx-auto w-full relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)]/20 via-transparent to-blue-500/20 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition duration-1000"></div>
+            <div className="relative border border-black/10 dark:border-white/10 bg-white dark:bg-[#0A0A0A] rounded-2xl overflow-hidden shadow-2xl p-2 backdrop-blur-3xl transform transition-transform duration-500 hover:scale-[1.01]">
+              <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/5 dark:bg-black/50 border border-black/5 dark:border-white/5 shadow-inner">
+                <iframe
+                  title="Cadence Intro Video"
+                  src="https://www.youtube.com/embed/6SE8bvTmmQc?si=DTMmGOHf3wyqIDTF&autoplay=0&rel=0&modestbranding=1"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="absolute top-0 left-0 w-full h-full grayscale hover:grayscale-0 transition duration-700"
+                ></iframe>
+              </div>
+            </div>
+          </div>
+        </section>
 
-            {/* Project logos + stats */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
-              {projects.map((p) => (
-                <a
-                  key={p.name}
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group rounded-2xl border border-fd-border bg-fd-card p-5 transition-colors hover:bg-fd-muted/50"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-lg bg-fd-muted flex items-center justify-center">
-                      <span className="text-xs font-bold text-fd-muted-foreground">
-                        {p.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
-                      </span>
-                    </div>
-                    <h3 className="font-semibold text-sm">{p.name}</h3>
-                    <ExternalLink className="w-3 h-3 text-fd-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  <p className="text-xs text-fd-muted-foreground leading-relaxed">
-                    {p.desc}
-                  </p>
-                </a>
-              ))}
+        {/* ════════ SCALE & TRUST ════════ */}
+        <section className="relative py-24 px-6 border-t border-black/5 dark:border-white/5">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center gap-6 mb-16">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent to-black/10 dark:to-white/10" />
+              <span className="font-mono text-xs text-neutral-500 dark:text-[#666] uppercase tracking-widest">
+                Built For Scale
+              </span>
+              <div className="h-px flex-1 bg-gradient-to-l from-transparent to-black/10 dark:to-white/10" />
             </div>
 
-            {/* Testimonials */}
-            <div className="grid md:grid-cols-3 gap-6">
-              {testimonials.map((t) => (
-                <div
-                  key={t.author}
-                  className="rounded-2xl border border-fd-border bg-fd-card p-6"
-                >
-                  <Quote className="w-5 h-5 text-fd-primary mb-3" />
-                  <p className="text-sm text-fd-foreground/90 leading-relaxed mb-4">
-                    "{t.quote}"
-                  </p>
-                  <div className="flex items-center gap-3 pt-3 border-t border-fd-border">
-                    <div className="w-8 h-8 rounded-full bg-fd-primary/10 flex items-center justify-center text-xs font-bold text-fd-primary">
-                      {t.avatar}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{t.author}</p>
-                      <p className="text-xs text-fd-muted-foreground">{t.role}</p>
-                    </div>
-                  </div>
+            <div className="flex flex-wrap justify-center gap-12 md:gap-24 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
+              <span className="text-2xl font-black tracking-tighter">
+                NBA TOP SHOT
+              </span>
+              <span className="text-2xl font-black tracking-tighter">
+                NFL ALL DAY
+              </span>
+              <span className="text-2xl font-black tracking-tighter">
+                TICKETMASTER
+              </span>
+              <span className="text-2xl font-black tracking-tighter">
+                DISNEY
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* ════════ FOOTER ════════ */}
+        <footer className="relative py-16 px-6 border-t border-black/5 dark:border-white/5 bg-neutral-100 dark:bg-[#050505]">
+          <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-start">
+            <div>
+              <Terminal className="text-green-600 dark:text-[#00FF94] w-8 h-8 mb-6" />
+              <p className="text-sm text-neutral-600 dark:text-[#666] leading-relaxed max-w-sm">
+                Cadence is the standard for programmable ownership. Integrated
+                with the AI agents of tomorrow.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-12 sm:justify-items-end">
+              <div className="space-y-4">
+                <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-[#888]">
+                  Ecosystem
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ════════ VIDEO ════════ */}
-        <section className="border-t border-fd-border">
-          <div className="max-w-4xl mx-auto px-6 py-20">
-            <div className="flex items-center gap-3 mb-8">
-              <span className="section-label">04 — Demo</span>
-              <span className="flex-1 h-px bg-fd-border" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-8">
-              See Cadence in Action
-            </h2>
-            <div
-              className="relative w-full overflow-hidden rounded-2xl border border-fd-border shadow-lg"
-              style={{ paddingBottom: '56.25%' }}
-            >
-              <iframe
-                className="absolute inset-0 w-full h-full"
-                src="https://www.youtube.com/embed/6SE8bvTmmQc?si=DTMmGOHf3wyqIDTF"
-                title="Cadence introduction video"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* ════════ BOTTOM CTA ════════ */}
-        <section className="border-t border-fd-border relative overflow-hidden">
-          <div className="absolute inset-0 hero-grid pointer-events-none opacity-50" />
-          <div className="scanlines absolute inset-0" />
-          <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[50rem] h-[50rem] rounded-full bg-[#00D87E]/[0.03] blur-[120px] pointer-events-none" />
-          <div className="relative max-w-3xl mx-auto px-6 py-24 text-center">
-            <p className="pixel-text text-[#00D87E] text-sm tracking-widest mb-4 glow-text">
-              GET STARTED
-            </p>
-            <h2 className="hero-heading text-3xl md:text-4xl tracking-tight mb-4">
-              Start building with Cadence
-            </h2>
-            <p className="text-fd-muted-foreground mb-6 max-w-lg mx-auto">
-              Your AI agent is one command away from writing production Cadence.
-            </p>
-            <div className="max-w-md mx-auto mb-8">
-              <div className="terminal-cmd group">
-                <div className="flex items-center gap-3 relative z-10">
-                  <span className="text-[#00D87E]/60 select-none">$</span>
-                  <code className="text-fd-foreground text-sm">
-                    <span className="text-fd-muted-foreground">npx</span>{' '}
-                    <span className="text-[#00D87E] font-semibold">skills add</span>{' '}
-                    {SKILLS_ORG}/cadence-lang.org
-                  </code>
+                <div className="flex flex-col gap-3 text-sm text-neutral-600 dark:text-[#555]">
+                  <Link
+                    to="/docs/$"
+                    className="hover:text-black dark:hover:text-white transition-colors"
+                  >
+                    Documentation
+                  </Link>
+                  <a
+                    href="https://play.flow.com"
+                    className="hover:text-black dark:hover:text-white transition-colors"
+                  >
+                    Playground
+                  </a>
+                  <a
+                    href="https://github.com/onflow/cadence"
+                    className="hover:text-black dark:hover:text-white transition-colors"
+                  >
+                    GitHub
+                  </a>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-[#888]">
+                  Community
+                </div>
+                <div className="flex flex-col gap-3 text-sm text-neutral-600 dark:text-[#555]">
+                  <Link
+                    to="/community"
+                    className="hover:text-black dark:hover:text-white transition-colors"
+                  >
+                    Discord
+                  </Link>
+                  <a href="#" className="hover:text-black dark:hover:text-white transition-colors">
+                    Forum
+                  </a>
+                  <a href="#" className="hover:text-black dark:hover:text-white transition-colors">
+                    Twitter
+                  </a>
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link
-                to="/docs/$"
-                params={{ _splat: 'tutorial/first-steps' }}
-                className="cta"
-              >
-                Start tutorial <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                to="/docs/$"
-                params={{ _splat: 'language' }}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-fd-border text-fd-foreground font-medium text-sm hover:bg-fd-muted transition-colors"
-              >
-                Language reference
-              </Link>
-            </div>
           </div>
-        </section>
+          <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-black/5 dark:border-white/5 flex flex-col md:flex-row justify-between gap-4">
+            <span className="text-xs text-neutral-500 dark:text-[#444]">
+              © 2026 Flow Foundation. All rights reserved.
+            </span>
+            <span className="text-xs font-mono text-neutral-500 dark:text-[#444]">
+              POWERED BY FLOW NETWORK
+            </span>
+          </div>
+        </footer>
       </div>
     </HomeLayout>
   );
