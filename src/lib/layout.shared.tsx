@@ -25,28 +25,6 @@ export function baseOptions(): BaseLayoutProps {
       },
       { text: 'Language Reference', url: '/docs/language' },
       {
-        type: 'custom',
-        on: 'nav',
-        secondary: true,
-        children: (
-          <div className="hidden lg:flex items-center gap-1 mr-1">
-            <a
-              href="/llms.txt"
-              className="px-2 py-1 text-[11px] font-mono text-fd-muted-foreground hover:text-fd-primary transition-colors rounded"
-            >
-              llms.txt
-            </a>
-            <span className="text-fd-border">·</span>
-            <a
-              href="/llms-full.txt"
-              className="px-2 py-1 text-[11px] font-mono text-fd-muted-foreground hover:text-fd-primary transition-colors rounded"
-            >
-              llms-full.txt
-            </a>
-          </div>
-        ),
-      },
-      {
         type: 'icon',
         text: 'GitHub',
         url: 'https://github.com/onflow/cadence',
