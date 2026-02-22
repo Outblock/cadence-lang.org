@@ -1,5 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/react-router';
 import { source } from '@/lib/source';
+import { CADENCE_ICON_DATA_URI } from '@/lib/og-icon';
 
 export const Route = createFileRoute('/og/docs/$')({
   server: {
@@ -35,13 +36,11 @@ export const Route = createFileRoute('/og/docs/$')({
                   marginBottom: '40px',
                 }}
               >
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #00D87E, #00EF8B)',
-                  }}
+                <img
+                  src={CADENCE_ICON_DATA_URI}
+                  width={40}
+                  height={40}
+                  style={{ borderRadius: '8px' }}
                 />
                 <span
                   style={{
