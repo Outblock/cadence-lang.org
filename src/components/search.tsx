@@ -343,19 +343,18 @@ export function AISearchPanel() {
         />
       </Presence>
 
-      {/* Floating panel — fixed bottom-right, does NOT push page layout */}
+      {/* Floating panel — fixed right side, full viewport height below navbar */}
       <Presence present={open}>
         <div
           className={cn(
             'fixed z-40 overflow-hidden',
-            'bottom-20 end-5',
+            'top-16 bottom-20 end-5',
             'w-[min(calc(100vw-2.5rem),420px)]',
-            'max-h-[70dvh]',
             'rounded-2xl border bg-fd-card text-fd-card-foreground shadow-2xl',
             open ? 'animate-fd-dialog-in' : 'animate-fd-dialog-out',
           )}
         >
-          <div className="flex flex-col h-full max-h-[70dvh] p-2">
+          <div className="flex flex-col h-full p-2">
             <AISearchPanelHeader />
             <AISearchPanelList className="flex-1 min-h-0" />
             <div className="rounded-xl border bg-fd-secondary text-fd-secondary-foreground shadow-sm has-focus-visible:shadow-md">
