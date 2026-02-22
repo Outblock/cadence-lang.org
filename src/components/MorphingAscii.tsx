@@ -35,11 +35,9 @@ function FlowCoin() {
 function CryptoKitty3D() {
   const { scene } = useGLTF('/assets/cryptokitty.glb');
 
-  // We apply a meshStandardMaterial to all children to ensure it catches the green lighting beautifully
   useEffect(() => {
     scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        // Keep original geometry but ensure it has some roughness for the ASCII shader light
         child.material.roughness = 0.5;
         child.material.metalness = 0.2;
       }
@@ -93,10 +91,16 @@ function AsciiScene({ activeCycleIdx, fgColor }: { activeCycleIdx: number; fgCol
 export function MorphingAscii() {
   const [activeCycleIdx, setActiveCycleIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
+    const mq = window.matchMedia('(max-width: 1023px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
   }, []);
 
   useEffect(() => {
@@ -111,12 +115,17 @@ export function MorphingAscii() {
   }
 
   return (
-    <div className="relative flex flex-col items-center justify-center p-0 m-0 pointer-events-none lg:pointer-events-auto lg:cursor-grab lg:active:cursor-grabbing group w-full h-[280px] lg:h-[700px] lg:w-[700px] lg:relative lg:-right-5 overflow-hidden lg:overflow-visible">
-
-      {/* 3D ASCII Canvas - No box, totally borderless */}
-      <div
-        className="absolute inset-0 overflow-hidden lg:overflow-visible ascii-wrapper"
-      >
+    <div
+      className={[
+        'relative flex flex-col items-center justify-center p-0 m-0 group',
+        'w-full h-[280px]',
+        'lg:h-[700px] lg:w-[700px] lg:-right-5',
+        'overflow-hidden lg:overflow-visible',
+        isMobile ? '' : 'cursor-grab active:cursor-grabbing',
+      ].join(' ')}
+    >
+      {/* 3D ASCII Canvas */}
+      <div className="absolute inset-0 overflow-hidden lg:overflow-visible ascii-wrapper">
         {resolvedTheme === 'light' && (
           <style>{`
             .ascii-wrapper > div {
@@ -124,23 +133,28 @@ export function MorphingAscii() {
             }
           `}</style>
         )}
-        <Canvas camera={{ position: [0, 0, 6.5], fov: 50 }}>
+        <Canvas
+          camera={{ position: [0, 0, 6.5], fov: 50 }}
+          // On mobile: disable R3F's entire event system so the canvas
+          // doesn't swallow touch events — page scroll works normally.
+          // On desktop: keep events active for OrbitControls drag.
+          events={isMobile ? { enabled: false } as never : undefined}
+          style={isMobile ? { touchAction: 'pan-y' } : { touchAction: 'none' }}
+        >
           <color attach="background" args={['transparent']} />
           <AsciiScene
             activeCycleIdx={activeCycleIdx}
             fgColor={resolvedTheme === 'light' ? '#000000' : '#00FF94'}
           />
-          {/* Disable rotation on mobile to avoid scroll conflict */}
           <OrbitControls
             autoRotate
             autoRotateSpeed={6}
             enableZoom={false}
             enablePan={false}
-            enableRotate={false}
+            enableRotate={!isMobile}
           />
         </Canvas>
       </div>
-
     </div>
   );
 }
