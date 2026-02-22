@@ -93,12 +93,10 @@ function AsciiScene({ activeCycleIdx, fgColor }: { activeCycleIdx: number; fgCol
 export function MorphingAscii() {
   const [activeCycleIdx, setActiveCycleIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
-    setIsMobile(window.innerWidth < 768);
   }, []);
 
   useEffect(() => {
@@ -109,16 +107,15 @@ export function MorphingAscii() {
   }, []);
 
   if (!mounted) {
-    return <div className="h-[600px] w-[600px]" />;
+    return <div className="w-full h-[280px] lg:h-[700px] lg:w-[700px]" />;
   }
 
   return (
-    <div className="relative flex flex-col items-center justify-center p-0 m-0 cursor-grab active:cursor-grabbing group h-[600px] w-[600px] lg:h-[700px] lg:w-[700px] -right-5 overflow-visible">
+    <div className="relative flex flex-col items-center justify-center p-0 m-0 pointer-events-none lg:pointer-events-auto lg:cursor-grab lg:active:cursor-grabbing group w-full h-[280px] lg:h-[700px] lg:w-[700px] lg:relative lg:-right-5 overflow-hidden lg:overflow-visible">
 
       {/* 3D ASCII Canvas - No box, totally borderless */}
       <div
-        className="absolute inset-0 overflow-visible ascii-wrapper"
-        style={{ touchAction: isMobile ? 'auto' : 'none' }}
+        className="absolute inset-0 overflow-hidden lg:overflow-visible ascii-wrapper"
       >
         {resolvedTheme === 'light' && (
           <style>{`
@@ -139,7 +136,7 @@ export function MorphingAscii() {
             autoRotateSpeed={6}
             enableZoom={false}
             enablePan={false}
-            enableRotate={!isMobile}
+            enableRotate={false}
           />
         </Canvas>
       </div>
