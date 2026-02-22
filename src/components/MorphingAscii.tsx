@@ -93,10 +93,12 @@ function AsciiScene({ activeCycleIdx, fgColor }: { activeCycleIdx: number; fgCol
 export function MorphingAscii() {
   const [activeCycleIdx, setActiveCycleIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
+    setIsMobile(window.innerWidth < 768);
   }, []);
 
   useEffect(() => {
@@ -114,7 +116,10 @@ export function MorphingAscii() {
     <div className="relative flex flex-col items-center justify-center p-0 m-0 cursor-grab active:cursor-grabbing group h-[600px] w-[600px] lg:h-[700px] lg:w-[700px] -right-5 overflow-visible">
 
       {/* 3D ASCII Canvas - No box, totally borderless */}
-      <div className="absolute inset-0 overflow-visible ascii-wrapper">
+      <div
+        className="absolute inset-0 overflow-visible ascii-wrapper"
+        style={{ touchAction: isMobile ? 'auto' : 'none' }}
+      >
         {resolvedTheme === 'light' && (
           <style>{`
             .ascii-wrapper > div {
@@ -128,8 +133,14 @@ export function MorphingAscii() {
             activeCycleIdx={activeCycleIdx}
             fgColor={resolvedTheme === 'light' ? '#000000' : '#00FF94'}
           />
-          {/* Let user drag and auto rotate */}
-          <OrbitControls autoRotate autoRotateSpeed={6} enableZoom={false} enablePan={false} />
+          {/* Disable rotation on mobile to avoid scroll conflict */}
+          <OrbitControls
+            autoRotate
+            autoRotateSpeed={6}
+            enableZoom={false}
+            enablePan={false}
+            enableRotate={!isMobile}
+          />
         </Canvas>
       </div>
 
