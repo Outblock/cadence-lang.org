@@ -118,6 +118,13 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* ════════ HOMEPAGE CODE — Shiki dual theme ════════ */
+.homepage-code .shiki span {
+  color: var(--shiki-light) !important;
+}
+.dark .homepage-code .shiki span {
+  color: var(--shiki-dark) !important;
+}
 
 .feature-line {
   position: relative;

@@ -520,7 +520,7 @@ function Home() {
                     <div className="overflow-hidden transition-[height] duration-300 ease-in-out" ref={codeContainerRef} style={{ height: codeHeight }}>
                       <div
                         key={activeCodeTab}
-                        className="p-4 sm:p-6 overflow-x-auto text-sm font-mono leading-relaxed [&_pre]:!bg-transparent [&_code]:!bg-transparent [&_pre]:!p-0 [&_code]:!p-0 animate-[fadeIn_200ms_ease-in-out]"
+                        className="homepage-code p-4 sm:p-6 overflow-x-auto text-sm font-mono leading-relaxed [&_pre]:!bg-transparent [&_code]:!bg-transparent [&_pre]:!p-0 [&_code]:!p-0 animate-[fadeIn_200ms_ease-in-out]"
                         ref={codeInnerRef}
                         dangerouslySetInnerHTML={{
                           __html: activeCodeTab === "nft" ? highlightedCode.nft : highlightedCode.defi,
