@@ -186,6 +186,17 @@ let ownerCap = signer.capabilities.storage
     .issue<auth(Withdraw) &Vault>(/storage/vault)
 ```
 
+### Public Capability Acquisition Returns Non-Optional
+
+`capabilities.get<T>` returns an **invalid capability** (not `nil`) when no capability exists or when `T` mismatches. Check validity with `.check()`:
+
+```cadence
+let capability = account.capabilities.get<&MyNFT.Collection>(/public/NFTCollection)
+if !capability.check() {
+    // Handle invalid capability (ID == 0, borrow returns nil)
+}
+```
+
 ---
 
 ## 4. Transactions & Scripts
@@ -289,7 +300,6 @@ access(all) contract BasicNFT {
         access(all) let metadata: {String: String}
         init(metadata: {String: String}) {
             self.id = self.uuid
-            self.metadata = metadata
             BasicNFT.totalSupply = BasicNFT.totalSupply + 1
             emit Minted(id: self.id)
         }
@@ -412,6 +422,18 @@ access(all) contract BasicToken {
 }
 ```
 
+### Cadence 1.0 Token Standard Changes
+
+`FungibleToken.Vault` and `NonFungibleToken.NFT` / `NonFungibleToken.Collection` are now **interfaces**, not concrete types. Update all references:
+
+```cadence
+// Before (Cadence 0.x)
+fun deposit(from: @FungibleToken.Vault)
+
+// After (Cadence 1.0)
+fun deposit(from: @{FungibleToken.Vault})
+```
+
 **Why vaults beat ledgers:**
 
 | Ledger (Solidity) | Vault (Cadence) |
@@ -435,7 +457,7 @@ access(all) fun withdraw(amount: UFix64): @Vault { ... }
 access(Withdraw) fun withdraw(amount: UFix64): @Vault { ... }
 ```
 
-### S2 — Never Pass Authorized Account Refs as Parameters
+### S2 — Never Pass Fully Authorized Account Refs as Parameters
 
 ```cadence
 // BAD — gives full storage access to callee
@@ -488,6 +510,26 @@ transaction {
         if signer.storage.type(at: /storage/vault) != nil { return }
         signer.storage.save(<- MyToken.createEmptyVault(), to: /storage/vault)
     }
+}
+```
+
+### S8 — Matching Access Modifiers Required for Interface Implementations
+
+Implementation members must use **exactly** the same access modifier as the interface:
+
+```cadence
+access(all) resource interface I {
+    access(account) fun foo()
+}
+
+// BAD — access(all) is more permissive than access(account)
+access(all) resource R: I {
+    access(all) fun foo() {}
+}
+
+// GOOD
+access(all) resource R: I {
+    access(account) fun foo() {}
 }
 ```
 
@@ -566,82 +608,82 @@ flow test --cover tests/my_test.cdc
 
 ---
 
-## 11. Additional Anti-Patterns
+## 11. Anti-Patterns
+
+### A1 — Never Pass Fully Authorized Account Refs as Parameters
+
+A function accepting `auth(Storage) &Account` can access *all* storage — drain vaults, steal NFTs.
+
+```cadence
+// BAD — callee can withdraw FLOW or modify anything
+access(all) fun transferNFT(id: UInt64, owner: auth(Storage) &Account) { ... }
+
+// GOOD — authenticate via resources/capabilities
+access(all) fun transferNFT(id: UInt64, collectionCap: Capability<auth(Withdraw) &Collection>) { ... }
+```
+
+### A2 — Public Functions Should Be Read-Only or Explicitly Entitled
+
+Only `view` functions and functions everyone should call should be `access(all)`. State-modifying functions require entitlements.
+
+### A3 — Capability-Typed Public Fields Are Security Holes
+
+Capabilities are value types — a public field can be copied by anyone:
+
+```cadence
+// BAD — anyone copies the capability and calls its functions
+access(all) var adminCap: Capability<&Admin>
+
+// GOOD
+access(self) var adminCap: Capability<&Admin>
+access(Owner) fun getAdminCap(): Capability<&Admin> { return self.adminCap }
+```
 
 ### A4 — Never Make Admin Creation Functions Public
 
-A public function that creates an admin resource allows **anyone** to mint admin access.
-
 ```cadence
-// BAD — anyone can call createAdmin() and gain admin power
-access(all) contract Currency {
-    access(all) resource Admin {
-        access(all) fun mintTokens() { }
-    }
-    access(all) fun createAdmin(): @Admin {   // DANGER
-        return <- create Admin()
-    }
-}
+// BAD — anyone mints admin access
+access(all) fun createAdmin(): @Admin { return <- create Admin() }
 
-// GOOD — Admin is created exactly once in init(), never again
-access(all) contract Currency {
-    access(all) resource Admin {
-        access(all) fun mintTokens() { }
-        // Only existing admins can create new ones
-        access(all) fun createAdmin(): @Admin { return <- create Admin() }
-    }
-    init() {
-        self.account.storage.save(<- create Admin(), to: /storage/currencyAdmin)
-    }
+// GOOD — create once in init, existing admins create new ones
+init() {
+    self.account.storage.save(<- create Admin(), to: /storage/currencyAdmin)
 }
 ```
 
 ### A5 — Never Emit Events or Modify Contract State in Struct Initializers
 
-Structs are public and anyone can create them without authorization. If struct `init()` increments counters or emits events, it can be abused.
+Structs are public and can be created by anyone. Side effects in `init()` can be exploited:
 
 ```cadence
-// BAD — anyone can create Play{} and spam events + overflow nextPlayID
-access(all) contract TopShot {
-    access(all) var nextPlayID: UInt32
-    access(all) struct Play {
-        init() {
-            self.playID = TopShot.nextPlayID
-            TopShot.nextPlayID = TopShot.nextPlayID + 1  // BAD
-            emit PlayCreated(id: self.playID)             // BAD
-        }
+// BAD — anyone spams events and overflows nextPlayID
+access(all) struct Play {
+    init() {
+        TopShot.nextPlayID = TopShot.nextPlayID + 1  // BAD
+        emit PlayCreated(id: self.playID)             // BAD
     }
 }
 
-// GOOD — state changes and events happen only inside the admin resource
-access(all) contract TopShot {
-    access(all) var nextPlayID: UInt32
-    access(all) struct Play {
-        access(all) let playID: UInt32
-        init() { self.playID = TopShot.nextPlayID }  // safe, no side effects
-    }
-    access(all) resource Admin {
-        access(all) fun createPlay() {
-            var newPlay = Play()
-            TopShot.nextPlayID = TopShot.nextPlayID + UInt32(1)
-            emit PlayCreated(id: newPlay.playID)
-            TopShot.playDatas[newPlay.playID] = newPlay
-        }
+// GOOD — state changes happen only inside admin resource
+access(all) resource Admin {
+    access(all) fun createPlay() {
+        var newPlay = Play()
+        TopShot.nextPlayID = TopShot.nextPlayID + UInt32(1)
+        emit PlayCreated(id: newPlay.playID)
     }
 }
 ```
 
 ### A6 — Complex/Capability Fields Must Be `access(self)`
 
-`access(all)` on a resource, struct, array, dictionary, or capability field allows anyone to **mutate** it directly.
+`access(all)` on arrays, dictionaries, structs, resources, or capabilities allows direct mutation:
 
 ```cadence
-// BAD — anyone can call functions on the stored capability
-access(all) var adminCap: Capability<&Admin>   // DANGER
+// BAD
+access(all) var adminCap: Capability<&Admin>
 
-// GOOD — expose only what you intend via access(E) functions
+// GOOD
 access(self) var adminCap: Capability<&Admin>
-access(Owner) fun getAdminCap(): Capability<&Admin> { return self.adminCap }
 ```
 
 ---
@@ -660,13 +702,11 @@ transaction(receiver: Address, name: String) {
         let capability = signer.capabilities.storage
             .issue<&BasicNFT.Minter>(BasicNFT.minterPath)
 
-        // Tag it for easy identification
         let controller = signer.capabilities.storage
             .getController(byCapabilityID: capability.id)
             ?? panic("Controller not found")
         controller.setTag(name)
 
-        // Publish to recipient — emits InboxValuePublished event
         signer.inbox.publish(capability, name: name, recipient: receiver)
     }
 }
@@ -679,7 +719,6 @@ import "BasicNFT"
 
 transaction(provider: Address, name: String) {
     prepare(signer: auth(ClaimInboxCapability, SaveValue) &Account) {
-        // Claim removes it from provider's account — emits InboxValueClaimed event
         let capability = signer.inbox.claim<&BasicNFT.Minter>(name, provider: provider)
             ?? panic("No capability named '\(name)' from \(provider)")
         signer.storage.save(capability, to: BasicNFT.minterPath)
@@ -702,7 +741,7 @@ transaction {
         let vault <- acct.storage.load<@ExampleToken.Vault>(from: /storage/exampleToken)!
         let burned <- vault.withdraw(amount: 10)
         destroy burned
-        acct.storage.save(<- vault, to: /storage/exampleToken)  // expensive
+        acct.storage.save(<- vault, to: /storage/exampleToken)
     }
 }
 
@@ -712,12 +751,9 @@ transaction {
         let vault = acct.storage.borrow<&ExampleToken.Vault>(from: /storage/exampleToken)!
         let burned <- vault.withdraw(amount: 10)
         destroy burned
-        // No save required
     }
 }
 ```
-
-The same applies to **nested containers** (arrays, dictionaries of resources). Always borrow a reference to the element rather than removing and re-inserting it.
 
 ---
 
@@ -726,18 +762,14 @@ The same applies to **nested containers** (arrays, dictionaries of resources). A
 Flow produces blocks approximately every **0.8 seconds**. Both block timestamp and block height are available on-chain.
 
 ```cadence
-// Get current block info
 let block = getCurrentBlock()
 block.timestamp   // Unix timestamp (UFix64, seconds)
 block.height      // Block number (UInt64)
 
-// Get a specific past block (returns nil if not available)
 let pastBlock = getBlock(at: 70001)
 pastBlock?.timestamp
 pastBlock?.height
 ```
-
-**Timestamp vs Block Height:**
 
 | Method | Use when |
 |---|---|
@@ -745,10 +777,9 @@ pastBlock?.height
 | `getCurrentBlock().height` | More manipulation-resistant. Requires off-chain rate estimation. |
 
 **Rules:**
-- Timestamps cannot go backwards and cannot be more than 10 seconds ahead of the previous block — use this for coarse-grained time locks.
+- Timestamps cannot go backwards and cannot be more than 10 seconds ahead of the previous block.
 - **Never hardcode an assumed block rate** — it changes over time.
-- Auctions and time-locks should have an **extension mechanism** (e.g., extend end time if a bid arrives in the final N minutes).
-- For sub-10-second precision, consider an oracle instead.
+- Auctions and time-locks should have an **extension mechanism**.
 
 ---
 
@@ -756,24 +787,50 @@ pastBlock?.height
 
 ### Compatible Changes (Preferred)
 
-Cadence supports in-place upgrades for additive changes: adding new fields (with defaults), new functions, new events. Use `flow contracts update` for these.
+Cadence supports in-place upgrades for additive changes: adding new fields (with defaults), new functions, new events. Use `flow contracts update`.
 
 ### Incompatible Changes
 
-If you must make a breaking change (removing/changing a field or resource):
-
 **Option A — New address (safest):**
-1. Deploy the new contract to a **new account**.
+1. Deploy new contract to a **new account**.
 2. Increment path suffixes (`/public/MyVault002`).
 3. Write upgrade transactions to migrate users' resources.
 
 **Option B — Same address (risky, last resort):**
-```
-1. Delete all resources in the contract account (e.g., Admin resource)
-2. Delete the contract from the account
-3. Deploy the new contract
-```
+1. Delete all resources in the contract account (e.g., Admin resource).
+2. Delete the contract from the account.
+3. Deploy the new contract.
 
 > ⚠️ If any user account holds `structs` or `resources` from the old contract version, those will **fail to load** and crash any transaction that touches them. Only do this before any users have received such objects.
 
-**Always communicate upgrades in advance** — at least one week before deploying, share the proposed transaction and branch/commit hash with the community so stakeholders can review and prepare.
+**Always communicate upgrades in advance** — at least one week before deploying, share the proposed transaction and branch/commit hash with the community.
+
+---
+
+## 16. Cadence 1.0 Key Changes Summary
+
+Cadence 1.0 (Crescendo upgrade, September 2024) introduced breaking changes. Key highlights:
+
+| Change | Impact |
+|---|---|
+| **View functions** | `view` keyword enforces no mutations; required in pre/post conditions. |
+| **Interface inheritance** | Interfaces can inherit from other interfaces of the same kind. |
+| **Entitlements** | Replace restricted types; control access via `access(E)` and `auth(E) &T`. |
+| **`pub`/`priv` removed** | Use `access(all)` and `access(self)` instead. |
+| **Intersection types** | `{I1, I2}` replaces `AnyStruct{I1, I2}` restricted types. |
+| **Account API** | `AuthAccount`/`PublicAccount` replaced by `&Account` with entitlements. |
+| **Capability Controllers** | Replace linking-based API; use `capabilities.storage.issue`, `publish`, `getController`. |
+| **Resource reference invalidation** | References invalidated when referenced resource is moved. |
+| **Force destruction** | `destroy` methods removed; resources destroyed implicitly; use `ResourceDestroyed` event. |
+| **Token standards** | `FungibleToken.Vault`, `NonFungibleToken.NFT`, `NonFungibleToken.Collection` are now interfaces (`@{Type}`). |
+
+### Emulator Import Addresses (Cadence 1.0)
+
+| Contract | Emulator | Testing Framework |
+|---|---|---|
+| `FungibleToken` | `0xee82856bf20e2aa6` | `0x0000000000000002` |
+| `NonFungibleToken` | `0xf8d6e0586b0a20c7` | `0x0000000000000001` |
+| `MetadataViews` | `0xf8d6e0586b0a20c7` | `0x0000000000000001` |
+| `ViewResolver` | `0xf8d6e0586b0a20c7` | `0x0000000000000001` |
+| `Burner` | `0xf8d6e0586b0a20c7` | `0x0000000000000001` |
+| `FlowToken` | `0x0ae53cb6e3f42a79` | `0x0000000000000003` |
