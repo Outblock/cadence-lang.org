@@ -1,7 +1,21 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, access } from 'node:fs/promises';
 import { join, extname, basename } from 'node:path';
 
-const DOCS_DIR = join(import.meta.dirname, '..', '..', 'content', 'docs');
+const DOCS_DIR =
+  process.env.DOCS_DIR || join(import.meta.dirname, '..', '..', 'content', 'docs');
+
+let _docsAvailable: boolean | null = null;
+
+export async function docsAvailable(): Promise<boolean> {
+  if (_docsAvailable !== null) return _docsAvailable;
+  try {
+    await access(DOCS_DIR);
+    _docsAvailable = true;
+  } catch {
+    _docsAvailable = false;
+  }
+  return _docsAvailable;
+}
 
 interface DocEntry {
   path: string;

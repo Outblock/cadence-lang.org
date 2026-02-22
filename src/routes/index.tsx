@@ -76,6 +76,34 @@ const getHighlightedCode = createServerFn({ method: "GET" }).handler(
 export const Route = createFileRoute("/")({
   component: Home,
   loader: () => getHighlightedCode(),
+  head: () => ({
+    meta: [
+      { title: 'Cadence - Build the Future of Consumer DeFi' },
+      {
+        name: 'description',
+        content:
+          'Cadence is the resource-oriented programming language for building secure smart contracts on Flow.',
+      },
+      { property: 'og:title', content: 'Cadence - Build the Future of Consumer DeFi' },
+      {
+        property: 'og:description',
+        content:
+          'The safest, most composable language for Web3. Built for AI-native development with resource ownership and capability-based security.',
+      },
+      { property: 'og:url', content: 'https://cadence-lang.org' },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:image', content: 'https://cadence-lang.org/og/home' },
+      { property: 'og:site_name', content: 'Cadence' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: 'Cadence - Build the Future of Consumer DeFi' },
+      {
+        name: 'twitter:description',
+        content:
+          'The safest, most composable language for Web3. Built for AI-native development with resource ownership and capability-based security.',
+      },
+      { name: 'twitter:image', content: 'https://cadence-lang.org/og/home' },
+    ],
+  }),
 });
 
 // ════════ COMPONENTS ════════

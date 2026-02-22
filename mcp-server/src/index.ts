@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CadenceLSPClient } from './lsp/client.js';
 import { createServer } from './server.js';
@@ -16,7 +17,7 @@ async function main() {
     lsp = undefined;
   }
 
-  const server = createServer(lsp);
+  const server = await createServer(lsp);
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

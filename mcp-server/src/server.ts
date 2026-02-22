@@ -1,16 +1,22 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { searchDocs, getDoc } from './search.js';
+import { searchDocs, getDoc, docsAvailable } from './search.js';
 import { CadenceLSPClient } from './lsp/client.js';
 
-export function createServer(lsp?: CadenceLSPClient): McpServer {
+export async function createServer(lsp?: CadenceLSPClient): Promise<McpServer> {
   const server = new McpServer({
     name: 'cadence-mcp',
     version: '1.0.0',
   });
 
-  // --- Documentation tools (stateless) ---
+  // --- Documentation tools (stateless, only if docs dir exists) ---
 
+  const hasDocs = await docsAvailable();
+  if (!hasDocs) {
+    console.error('[cadence-mcp] Docs directory not found, doc tools disabled.');
+  }
+
+  if (hasDocs) {
   server.tool(
     'search_docs',
     'Search Cadence documentation by query',
@@ -59,6 +65,7 @@ export function createServer(lsp?: CadenceLSPClient): McpServer {
       };
     },
   );
+  } // end hasDocs
 
   // --- LSP tools (require Flow CLI) ---
 

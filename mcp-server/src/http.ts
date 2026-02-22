@@ -26,7 +26,7 @@ async function main() {
   // Stateless MCP endpoint: each request gets its own server+transport
   app.all('/mcp', async (c) => {
     try {
-      const server = createServer(lsp);
+      const server = await createServer(lsp);
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // stateless
       });
