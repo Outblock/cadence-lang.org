@@ -418,14 +418,18 @@ export function AISearchPanel() {
 
 
 const suggestedQuestions = [
-  'What are resources in Cadence?',
-  'How do capabilities work?',
-  'How do I write a fungible token contract?',
-  'What is account storage?',
-  'How are transactions structured?',
-  'What are pre and post conditions?',
-  'How do I emit and listen to events?',
-  'What is the difference between structs and resources?',
+  { emoji: '📦', text: 'What are resources in Cadence?' },
+  { emoji: '🔑', text: 'How do capabilities work?' },
+  { emoji: '🪙', text: 'How do I write a fungible token contract?' },
+  { emoji: '🗄️', text: 'What is account storage?' },
+  { emoji: '📝', text: 'How are transactions structured?' },
+  { emoji: '✅', text: 'What are pre and post conditions?' },
+  { emoji: '📡', text: 'How do I emit and listen to events?' },
+  { emoji: '🔀', text: 'What is the difference between structs and resources?' },
+  { emoji: '🖼️', text: 'How do I create an NFT collection?' },
+  { emoji: '🔒', text: 'How does access control work in Cadence?' },
+  { emoji: '🔗', text: 'How do I interact with other contracts?' },
+  { emoji: '🚀', text: 'How do I deploy a contract to Flow?' },
 ];
 
 function getRandomQuestions(count: number) {
@@ -455,15 +459,16 @@ export function AISearchPanelList({ className, style, ...props }: ComponentProps
           <div className="flex flex-col gap-1.5 w-full max-w-xs mt-1">
             {suggestions.map((q) => (
               <button
-                key={q}
+                key={q.text}
                 type="button"
-                className="text-left text-xs px-3 py-2 rounded-lg border border-fd-border hover:bg-fd-accent hover:text-fd-accent-foreground transition-colors text-fd-muted-foreground"
+                className="flex items-center gap-2 text-left text-xs px-3 py-2 rounded-lg border border-fd-border hover:bg-fd-accent hover:text-fd-accent-foreground transition-colors text-fd-muted-foreground"
                 onClick={(e) => {
                   e.stopPropagation();
-                  void chat.sendMessage({ text: q });
+                  void chat.sendMessage({ text: q.text });
                 }}
               >
-                {q}
+                <span className="text-sm shrink-0">{q.emoji}</span>
+                <span>{q.text}</span>
               </button>
             ))}
           </div>
