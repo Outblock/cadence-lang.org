@@ -314,8 +314,9 @@ export function AISearchTrigger({
       data-state={open ? 'open' : 'closed'}
       className={cn(
         position === 'float' && [
-          'fixed bottom-4 gap-3 w-24 end-[calc(--spacing(4)+var(--removed-body-scroll-bar-size,0px))] shadow-lg z-20 transition-[translate,opacity]',
-          open && 'translate-y-10 opacity-0',
+          // Fixed floating button, bottom-right — hides when panel is open
+          'fixed bottom-5 end-5 z-40 flex items-center gap-2 shadow-lg transition-[translate,opacity] duration-200',
+          open && 'translate-y-3 opacity-0 pointer-events-none',
         ],
         className,
       )}
@@ -333,46 +334,30 @@ export function AISearchPanel() {
 
   return (
     <>
-      <style>
-        {`
-        @keyframes ask-ai-open {
-          from {
-            translate: 100% 0;
-          }
-          to {
-            translate: 0 0;
-          }
-        }
-        @keyframes ask-ai-close {
-          from {
-            width: var(--ai-chat-width);
-          }
-          to {
-            width: 0px;
-          }
-        }`}
-      </style>
+      {/* Lightweight backdrop — lets content show through, click to close */}
       <Presence present={open}>
         <div
           data-state={open ? 'open' : 'closed'}
-          className="fixed inset-0 z-30 backdrop-blur-xs bg-fd-overlay data-[state=open]:animate-fd-fade-in data-[state=closed]:animate-fd-fade-out lg:hidden"
+          className="fixed inset-0 z-30 data-[state=open]:animate-fd-fade-in data-[state=closed]:animate-fd-fade-out"
           onClick={() => setOpen(false)}
         />
       </Presence>
+
+      {/* Floating panel — fixed bottom-right, does NOT push page layout */}
       <Presence present={open}>
         <div
           className={cn(
-            'overflow-hidden z-30 bg-fd-card text-fd-card-foreground [--ai-chat-width:400px] 2xl:[--ai-chat-width:460px]',
-            'max-lg:fixed max-lg:inset-x-2 max-lg:top-4 max-lg:border max-lg:rounded-2xl max-lg:shadow-xl',
-            'lg:sticky lg:top-0 lg:h-dvh lg:border-s lg:ms-auto lg:in-[#nd-docs-layout]:[grid-area:toc] lg:in-[#nd-notebook-layout]:row-span-full lg:in-[#nd-notebook-layout]:col-start-5',
-            open
-              ? 'animate-fd-dialog-in lg:animate-[ask-ai-open_200ms]'
-              : 'animate-fd-dialog-out lg:animate-[ask-ai-close_200ms]',
+            'fixed z-40 overflow-hidden',
+            'bottom-20 end-5',
+            'w-[min(calc(100vw-2.5rem),420px)]',
+            'max-h-[70dvh]',
+            'rounded-2xl border bg-fd-card text-fd-card-foreground shadow-2xl',
+            open ? 'animate-fd-dialog-in' : 'animate-fd-dialog-out',
           )}
         >
-          <div className="flex flex-col size-full p-2 max-lg:max-h-[80dvh] lg:p-3 lg:w-(--ai-chat-width)">
+          <div className="flex flex-col h-full max-h-[70dvh] p-2">
             <AISearchPanelHeader />
-            <AISearchPanelList className="flex-1" />
+            <AISearchPanelList className="flex-1 min-h-0" />
             <div className="rounded-xl border bg-fd-secondary text-fd-secondary-foreground shadow-sm has-focus-visible:shadow-md">
               <AISearchInput />
               <div className="flex items-center gap-1.5 p-1 empty:hidden">
