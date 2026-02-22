@@ -13,6 +13,10 @@ dist
 .tanstack
 src/routeTree.gen.ts
 
+# IDE
+.idea
+.vscode
+
 # Misc
 .DS_Store
 .env.local
