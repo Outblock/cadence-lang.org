@@ -21,6 +21,7 @@ export const Route = createFileRoute('/community')({
       { property: 'og:type', content: 'website' },
       { property: 'og:image', content: 'https://cadence-lang.org/og/home' },
       { property: 'og:site_name', content: 'Cadence' },
+      { property: 'og:logo', content: 'https://cadence-lang.org/img/logo.svg' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'Community | Cadence' },
       {

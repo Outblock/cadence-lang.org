@@ -147,3 +147,21 @@ pre.shiki {
   background: var(--accent);
   opacity: 0.5;
 }
+
+/* ════════ SHIKI DUAL THEME ════════ */
+.shiki,
+.shiki span {
+  color: var(--shiki-light) !important;
+  background-color: transparent !important;
+}
+
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+}
+
+/* ════════ ANIMATIONS ════════ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -50,6 +50,7 @@ export const Route = createFileRoute('/docs/$')({
         { property: 'og:type', content: 'article' },
         { property: 'og:image', content: `https://cadence-lang.org${ogImage}` },
         { property: 'og:site_name', content: 'Cadence' },
+        { property: 'og:logo', content: 'https://cadence-lang.org/img/logo.svg' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: title },
         { name: 'twitter:description', content: description },

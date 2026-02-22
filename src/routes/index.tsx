@@ -24,7 +24,7 @@ import {
 } from "@/components/search";
 
 // ════════ DATA ════════
-const corePillars = [
+const nftPillars = [
   {
     title: "Resource Oriented",
     label: "SAFETY",
@@ -35,14 +35,27 @@ const corePillars = [
     label: "ACCESS",
     desc: "Security via object-capabilities. Authority is granted by holding a reference to a resource, removing the need for error-prone permission lists.",
   },
+];
+
+const defiPillars = [
   {
-    title: "AI Optimized",
-    label: "CONTEXT",
-    desc: "Standardized MCP servers and llms.txt allow AI agents to understand your contracts with zero hallucination. Built for the era of autonomous coding.",
+    title: "Atomic Multi-Step Transactions",
+    label: "EXPERIENCE",
+    desc: "Compose complex DeFi flows — claim, swap, restake — in a single transaction. Everything succeeds or everything reverts. No intermediary contracts needed.",
+  },
+  {
+    title: "User-Custodied Assets",
+    label: "SAFETY",
+    desc: "User assets stay in user accounts, not in contract storage. Combined with a strong static type system and capability-based access control, Cadence eliminates entire classes of DeFi vulnerabilities.",
+  },
+  {
+    title: "Composable DeFi Primitives",
+    label: "COMPOSABILITY",
+    desc: "Resources flow freely between contracts, enabling seamless integration of lending, swapping, and yield strategies. Build new DeFi functionality on top of any standard.",
   },
 ];
 
-const codeSnippet = `// The system enforces ownership
+const nftSnippet = `// The system enforces ownership
 access(all) resource NFT {
     access(all) let id: UInt64
     init() { self.id = self.uuid }
@@ -54,6 +67,51 @@ access(all) fun transfer(token: @NFT) {
     Receiver.deposit(token: <- token)
 }`;
 
+const defiSnippet = `import "DeFiActions"
+import "FlowToken"
+import "IncrementFiStakingConnectors"
+import "IncrementFiPoolLiquidityConnectors"
+import "SwapConnectors"
+
+// Schedule daily yield compounding with Flow Actions
+transaction(stakingPoolId: UInt64, executionEffort: UInt64) {
+    prepare(signer: auth(Storage, Capabilities) &Account) {
+
+        // Compose DeFi actions atomically: Claim → Zap → Restake
+        let operationID = DeFiActions.createUniqueIdentifier()
+        
+        // Source: Claim staking rewards
+        let rewardsSource = IncrementFiStakingConnectors.PoolRewardsSource(
+            userCertificate: signer.capabilities.storage
+                .issue<&StakingPool>(/storage/userCertificate),
+            pid: stakingPoolId,
+            uniqueID: operationID
+        )
+        
+        // Swapper: Convert single reward token → LP tokens
+        let zapper = IncrementFiPoolLiquidityConnectors.Zapper(
+            token0Type: Type<@FlowToken.Vault>(),
+            token1Type: Type<@RewardToken.Vault>(),
+            stableMode: false,
+            uniqueID: operationID
+        )
+        
+        // Compose: Wrap rewards source with zapper
+        let lpSource = SwapConnectors.SwapSource(
+            swapper: zapper,
+            source: rewardsSource,
+            uniqueID: operationID
+        )
+        
+        // Sink: Restake LP tokens back into pool
+        let poolSink = IncrementFiStakingConnectors.PoolSink(
+            pid: stakingPoolId,
+            staker: signer.address,
+            uniqueID: operationID
+        )
+    }
+}`;
+
 // ════════ HIGHLIGHTER ════════
 const getHighlightedCode = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -61,14 +119,23 @@ const getHighlightedCode = createServerFn({ method: "GET" }).handler(
       const { codeToHtml } = await import("shiki");
       const cadenceGrammar = (await import("@/lib/cadence.tmLanguage.json"))
         .default;
-      return await codeToHtml(codeSnippet, {
+
+      const highlight = async (code: string) => codeToHtml(code, {
         lang: "cadence",
         // @ts-expect-error type mismatches but custom lang works
         langs: [cadenceGrammar as never],
-        theme: "github-dark",
+        themes: { light: "github-light", dark: "github-dark" },
       });
+
+      return {
+        nft: await highlight(nftSnippet),
+        defi: await highlight(defiSnippet),
+      };
     } catch (e) {
-      return `<pre><code>${codeSnippet}</code></pre>`;
+      return {
+        nft: `<pre><code>${nftSnippet}</code></pre>`,
+        defi: `<pre><code>${defiSnippet}</code></pre>`,
+      };
     }
   },
 );
@@ -94,6 +161,7 @@ export const Route = createFileRoute("/")({
       { property: 'og:type', content: 'website' },
       { property: 'og:image', content: 'https://cadence-lang.org/og/home' },
       { property: 'og:site_name', content: 'Cadence' },
+      { property: 'og:logo', content: 'https://cadence-lang.org/img/logo.svg' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'Cadence - Build the Future of Consumer DeFi' },
       {
@@ -255,6 +323,16 @@ function Home() {
   const [activeCmd, setActiveCmd] = useState(0);
   const [mcpClient, setMcpClient] = useState<string>(mcpClients[0].value);
   const [typingKey, setTypingKey] = useState(0);
+  const [activeCodeTab, setActiveCodeTab] = useState<"nft" | "defi">("nft");
+  const codeContainerRef = useRef<HTMLDivElement>(null);
+  const codeInnerRef = useRef<HTMLDivElement>(null);
+  const [codeHeight, setCodeHeight] = useState<string>("auto");
+
+  useEffect(() => {
+    if (codeInnerRef.current) {
+      setCodeHeight(`${codeInnerRef.current.scrollHeight}px`);
+    }
+  }, [activeCodeTab]);
 
   const current = heroCommands[activeCmd];
   const commandText = typeof current.copyText === "function"
@@ -396,42 +474,62 @@ function Home() {
           <section className="relative py-24 px-6 z-10">
             <div className="max-w-7xl mx-auto">
               <div className="grid lg:grid-cols-12 gap-16">
-                <div className="lg:col-span-4 min-w-0 space-y-12">
-                  <h3 className="text-2xl font-bold border-b border-black/10 dark:border-white/10 pb-4">
+                <div className="lg:col-span-4 min-w-0">
+                  <h3 className="text-2xl font-bold border-b border-black/10 dark:border-white/10 pb-4 mb-12">
                     Architectural Pillars
                   </h3>
-                  {corePillars.map((p, i) => (
-                    <div key={i} className="group">
-                      <div className="text-[10px] font-mono text-green-600 dark:text-[var(--accent)] mb-2 opacity-80 dark:opacity-50 group-hover:opacity-100 transition-opacity">
-                        {p.label}
+                  <div className="space-y-10">
+                    {(activeCodeTab === "nft" ? nftPillars : defiPillars).map((p, i) => (
+                      <div key={`${activeCodeTab}-${i}`} className="group animate-[fadeIn_300ms_ease-in-out]">
+                        <div className="text-[10px] font-mono text-green-600 dark:text-[var(--accent)] mb-2 opacity-80 dark:opacity-50 group-hover:opacity-100 transition-opacity">
+                          {p.label}
+                        </div>
+                        <h4 className="text-xl font-bold mb-3">{p.title}</h4>
+                        <p className="text-sm text-neutral-600 dark:text-[#888] leading-relaxed">
+                          {p.desc}
+                        </p>
                       </div>
-                      <h4 className="text-xl font-bold mb-3">{p.title}</h4>
-                      <p className="text-sm text-neutral-600 dark:text-[#888] leading-relaxed">
-                        {p.desc}
-                      </p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
 
                 <div className="lg:col-span-8 min-w-0 lg:sticky lg:top-40 lg:self-start h-fit">
                   <div className="border border-black/10 dark:border-white/10 bg-white dark:bg-[#0A0A0A] rounded-xl overflow-hidden shadow-2xl">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-neutral-50 dark:bg-[#111]">
-                      <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 sm:px-4 py-2 border-b border-black/5 dark:border-white/5 bg-neutral-50 dark:bg-[#111] gap-2 sm:gap-0">
+                      <div className="flex gap-2 items-center px-2 sm:px-0">
                         <div className="w-3 h-3 rounded-full bg-red-500/80" />
                         <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
                         <div className="w-3 h-3 rounded-full bg-green-500/80" />
                       </div>
-                      <span className="font-mono text-xs text-neutral-500 dark:text-[#888]">
-                        Resource_Interface.cdc
-                      </span>
+                      <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-lg self-start sm:self-auto">
+                        <button
+                          onClick={() => setActiveCodeTab("nft")}
+                          className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${activeCodeTab === "nft" ? "bg-white dark:bg-white/10 text-neutral-900 dark:text-white shadow-sm" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"}`}
+                        >
+                          NFT
+                        </button>
+                        <button
+                          onClick={() => setActiveCodeTab("defi")}
+                          className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${activeCodeTab === "defi" ? "bg-white dark:bg-white/10 text-neutral-900 dark:text-white shadow-sm" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"}`}
+                        >
+                          DeFi
+                        </button>
+                      </div>
                     </div>
-                    <div
-                      className="p-6 overflow-auto text-sm [&>pre]:!bg-transparent"
-                      dangerouslySetInnerHTML={{ __html: highlightedCode }}
-                    />
+                    <div className="overflow-hidden transition-[height] duration-300 ease-in-out" ref={codeContainerRef} style={{ height: codeHeight }}>
+                      <div
+                        key={activeCodeTab}
+                        className="p-4 sm:p-6 overflow-x-auto text-sm font-mono leading-relaxed [&_pre]:!bg-transparent [&_code]:!bg-transparent [&_pre]:!p-0 [&_code]:!p-0 animate-[fadeIn_200ms_ease-in-out]"
+                        ref={codeInnerRef}
+                        dangerouslySetInnerHTML={{
+                          __html: activeCodeTab === "nft" ? highlightedCode.nft : highlightedCode.defi,
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
+
             </div>
           </section>
 
@@ -499,135 +597,135 @@ function Home() {
                     receiver.deposit(vault: {"<-"} vault)
                     <br />
                     <span className="text-white/40 mt-2 block">
-                    // vault is now empty, reentrancy impossible
+                      // vault is now empty, reentrancy impossible
                     </span>
                   </div>
                 </div>
               </div>
             </div>
           </section>
-          {/* ════════ VIDEO PRESENTATION ════════ */}
-          <section className="relative py-24 px-6 z-10 border-t border-black/5 dark:border-white/5 bg-black/5 dark:bg-black/50">
-            <div className="text-center mb-16">
-              <span className="text-green-600 dark:text-[var(--accent)] font-mono text-xs tracking-widest uppercase mb-4 block">
-                Watch The Intro
-              </span>
-              <h2 className="text-3xl md:text-5xl font-bold">
-                BUILT FOR CONSUMER APPS & DEFI
-              </h2>
-            </div>
-            <div className="max-w-5xl mx-auto w-full relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)]/20 via-transparent to-blue-500/20 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition duration-1000"></div>
-              <div className="relative border border-black/10 dark:border-white/10 bg-white dark:bg-[#0A0A0A] rounded-2xl overflow-hidden shadow-2xl p-2 backdrop-blur-3xl transform transition-transform duration-500 hover:scale-[1.01]">
-                <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/5 dark:bg-black/50 border border-black/5 dark:border-white/5 shadow-inner">
-                  <iframe
-                    title="Cadence Intro Video"
-                    src="https://www.youtube.com/embed/6SE8bvTmmQc?si=DTMmGOHf3wyqIDTF&autoplay=0&rel=0&modestbranding=1"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    className="absolute top-0 left-0 w-full h-full"
-                  ></iframe>
-                </div>
-              </div>
-            </div>
-          </section>
+                  {/* ════════ VIDEO PRESENTATION ════════ */}
+                  <section className="relative py-24 px-6 z-10 border-t border-black/5 dark:border-white/5 bg-black/5 dark:bg-black/50">
+                    <div className="text-center mb-16">
+                      <span className="text-green-600 dark:text-[var(--accent)] font-mono text-xs tracking-widest uppercase mb-4 block">
+                        Watch The Intro
+                      </span>
+                      <h2 className="text-3xl md:text-5xl font-bold">
+                        BUILT FOR CONSUMER APPS & DEFI
+                      </h2>
+                    </div>
+                    <div className="max-w-5xl mx-auto w-full relative group">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)]/20 via-transparent to-blue-500/20 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition duration-1000"></div>
+                      <div className="relative border border-black/10 dark:border-white/10 bg-white dark:bg-[#0A0A0A] rounded-2xl overflow-hidden shadow-2xl p-2 backdrop-blur-3xl transform transition-transform duration-500 hover:scale-[1.01]">
+                        <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/5 dark:bg-black/50 border border-black/5 dark:border-white/5 shadow-inner">
+                          <iframe
+                            title="Cadence Intro Video"
+                            src="https://www.youtube.com/embed/6SE8bvTmmQc?si=DTMmGOHf3wyqIDTF&autoplay=0&rel=0&modestbranding=1"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            className="absolute top-0 left-0 w-full h-full"
+                          ></iframe>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
 
-          {/* ════════ SCALE & TRUST ════════ */}
-          <section className="relative py-24 px-6 border-t border-black/5 dark:border-white/5">
-            <div className="max-w-7xl mx-auto">
-              <div className="flex items-center gap-6 mb-16">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-black/10 dark:to-white/10" />
-                <span className="font-mono text-xs text-neutral-500 dark:text-[#666] uppercase tracking-widest">
-                  Built For Scale
-                </span>
-                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-black/10 dark:to-white/10" />
-              </div>
+                  {/* ════════ SCALE & TRUST ════════ */}
+                  <section className="relative py-24 px-6 border-t border-black/5 dark:border-white/5">
+                    <div className="max-w-7xl mx-auto">
+                      <div className="flex items-center gap-6 mb-16">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-black/10 dark:to-white/10" />
+                        <span className="font-mono text-xs text-neutral-500 dark:text-[#666] uppercase tracking-widest">
+                          Built For Scale
+                        </span>
+                        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-black/10 dark:to-white/10" />
+                      </div>
 
-              <div className="flex flex-wrap justify-center gap-12 md:gap-24 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
-                <span className="text-2xl font-black tracking-tighter">
-                  NBA TOP SHOT
-                </span>
-                <span className="text-2xl font-black tracking-tighter">
-                  NFL ALL DAY
-                </span>
-                <span className="text-2xl font-black tracking-tighter">
-                  TICKETMASTER
-                </span>
-                <span className="text-2xl font-black tracking-tighter">
-                  DISNEY
-                </span>
-              </div>
-            </div>
-          </section>
+                      <div className="flex flex-wrap justify-center gap-12 md:gap-24 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
+                        <span className="text-2xl font-black tracking-tighter">
+                          NBA TOP SHOT
+                        </span>
+                        <span className="text-2xl font-black tracking-tighter">
+                          NFL ALL DAY
+                        </span>
+                        <span className="text-2xl font-black tracking-tighter">
+                          TICKETMASTER
+                        </span>
+                        <span className="text-2xl font-black tracking-tighter">
+                          DISNEY
+                        </span>
+                      </div>
+                    </div>
+                  </section>
 
-          {/* ════════ FOOTER ════════ */}
-          <footer className="relative py-16 px-6 border-t border-black/5 dark:border-white/5 bg-neutral-100 dark:bg-[#050505]">
-            <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-start">
-              <div>
-                <Terminal className="text-green-600 dark:text-[#00FF94] w-8 h-8 mb-6" />
-                <p className="text-sm text-neutral-600 dark:text-[#666] leading-relaxed max-w-sm">
-                  Cadence is the standard for programmable ownership. Integrated
-                  with the AI agents of tomorrow.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-12 sm:justify-items-end">
-                <div className="space-y-4">
-                  <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-[#888]">
-                    Ecosystem
-                  </div>
-                  <div className="flex flex-col gap-3 text-sm text-neutral-600 dark:text-[#555]">
-                    <Link
-                      to="/docs/$"
-                      className="hover:text-black dark:hover:text-white transition-colors"
-                    >
-                      Documentation
-                    </Link>
-                    <a
-                      href="https://play.flow.com"
-                      className="hover:text-black dark:hover:text-white transition-colors"
-                    >
-                      Playground
-                    </a>
-                    <a
-                      href="https://github.com/onflow/cadence"
-                      className="hover:text-black dark:hover:text-white transition-colors"
-                    >
-                      GitHub
-                    </a>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-[#888]">
-                    Community
-                  </div>
-                  <div className="flex flex-col gap-3 text-sm text-neutral-600 dark:text-[#555]">
-                    <Link
-                      to="/community"
-                      className="hover:text-black dark:hover:text-white transition-colors"
-                    >
-                      Discord
-                    </Link>
-                    <a href="#" className="hover:text-black dark:hover:text-white transition-colors">
-                      Forum
-                    </a>
-                    <a href="#" className="hover:text-black dark:hover:text-white transition-colors">
-                      Twitter
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-black/5 dark:border-white/5 flex flex-col md:flex-row justify-between gap-4">
-              <span className="text-xs text-neutral-500 dark:text-[#444]">
-                © 2026 Flow Foundation. All rights reserved.
-              </span>
-              <span className="text-xs font-mono text-neutral-500 dark:text-[#444]">
-                POWERED BY FLOW NETWORK
-              </span>
-            </div>
-          </footer>
-        </div>
-      </HomeLayout>
-    </AISearch>
-  );
+                  {/* ════════ FOOTER ════════ */}
+                  <footer className="relative py-16 px-6 border-t border-black/5 dark:border-white/5 bg-neutral-100 dark:bg-[#050505]">
+                    <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-start">
+                      <div>
+                        <Terminal className="text-green-600 dark:text-[#00FF94] w-8 h-8 mb-6" />
+                        <p className="text-sm text-neutral-600 dark:text-[#666] leading-relaxed max-w-sm">
+                          Cadence is the standard for programmable ownership. Integrated
+                          with the AI agents of tomorrow.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-12 sm:justify-items-end">
+                        <div className="space-y-4">
+                          <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-[#888]">
+                            Ecosystem
+                          </div>
+                          <div className="flex flex-col gap-3 text-sm text-neutral-600 dark:text-[#555]">
+                            <Link
+                              to="/docs/$"
+                              className="hover:text-black dark:hover:text-white transition-colors"
+                            >
+                              Documentation
+                            </Link>
+                            <a
+                              href="https://play.flow.com"
+                              className="hover:text-black dark:hover:text-white transition-colors"
+                            >
+                              Playground
+                            </a>
+                            <a
+                              href="https://github.com/onflow/cadence"
+                              className="hover:text-black dark:hover:text-white transition-colors"
+                            >
+                              GitHub
+                            </a>
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-[#888]">
+                            Community
+                          </div>
+                          <div className="flex flex-col gap-3 text-sm text-neutral-600 dark:text-[#555]">
+                            <Link
+                              to="/community"
+                              className="hover:text-black dark:hover:text-white transition-colors"
+                            >
+                              Discord
+                            </Link>
+                            <a href="#" className="hover:text-black dark:hover:text-white transition-colors">
+                              Forum
+                            </a>
+                            <a href="#" className="hover:text-black dark:hover:text-white transition-colors">
+                              Twitter
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-black/5 dark:border-white/5 flex flex-col md:flex-row justify-between gap-4">
+                      <span className="text-xs text-neutral-500 dark:text-[#444]">
+                        © 2026 Flow Foundation. All rights reserved.
+                      </span>
+                      <span className="text-xs font-mono text-neutral-500 dark:text-[#444]">
+                        POWERED BY FLOW NETWORK
+                      </span>
+                    </div>
+                  </footer>
+                </div >
+              </HomeLayout >
+            </AISearch >
+            );
 }
