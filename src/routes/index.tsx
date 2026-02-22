@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
@@ -108,12 +108,161 @@ export const Route = createFileRoute("/")({
 
 // ════════ COMPONENTS ════════
 
+const mcpClients = [
+  { value: "claude-code", label: "Claude Code" },
+  { value: "cursor", label: "Cursor" },
+  { value: "windsurf", label: "Windsurf" },
+  { value: "claude-desktop", label: "Claude Desktop" },
+  { value: "vscode", label: "VS Code" },
+  { value: "antigravity", label: "Antigravity" },
+  { value: "opencode", label: "OpenCode" },
+] as const;
+
+function CommandDisplay({ render, text, typingKey }: {
+  render: React.ReactNode;
+  text: string;
+  typingKey: number;
+}) {
+  const { displayed, typing } = useTypewriter(text, typingKey, 25);
+  const charCount = displayed.length;
+
+  return (
+    <div className="flex items-center gap-2 font-mono text-[13px] sm:text-sm min-w-0">
+      <span className="text-neutral-400 dark:text-[#555] select-none shrink-0">$</span>
+      <span className="font-medium whitespace-nowrap overflow-x-auto scrollbar-none relative">
+        {/* Invisible full text for layout */}
+        <span className="invisible" aria-hidden>{render}</span>
+        {/* Visible clipped text with syntax highlighting */}
+        <span
+          className="absolute inset-0"
+          style={{ clipPath: `inset(0 ${100 - (text.length > 0 ? (charCount / text.length) * 100 : 100)}% 0 0)` }}
+        >
+          {render}
+        </span>
+        {/* Blinking cursor during typing */}
+        {typing && (
+          <span className="inline-block w-[2px] h-[1.1em] bg-[var(--accent)] ml-[1px] align-middle animate-pulse" />
+        )}
+      </span>
+    </div>
+  );
+}
+
+function useTypewriter(text: string, key: number, speed = 30) {
+  const [displayed, setDisplayed] = useState(text);
+  const [typing, setTyping] = useState(false);
+
+  useEffect(() => {
+    if (key === 0) { setDisplayed(text); return; }
+    setTyping(true);
+    setDisplayed("");
+    let i = 0;
+    const id = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) { clearInterval(id); setTyping(false); }
+    }, speed);
+    return () => clearInterval(id);
+  }, [text, key, speed]);
+
+  return { displayed, typing };
+}
+
+// Terminal syntax highlight tokens (dark-first since site defaults to dark)
+const S = {
+  cmd: "text-yellow-500 dark:text-yellow-400",        // command binary
+  pkg: "text-green-600 dark:text-[#00EF8B]",          // package / value
+  flag: "text-blue-500 dark:text-blue-400",           // --flags
+  url: "text-cyan-600 dark:text-cyan-400",            // URLs
+  dim: "text-neutral-500 dark:text-neutral-500",      // subcommands
+} as const;
+
+type HeroCommand = {
+  key: string;
+  label: string;
+  copyText: string | ((client: string) => string);
+  render: (client: string) => React.ReactNode;
+  hint: string;
+  href: string;
+  hasClientSelect?: boolean;
+};
+
+const heroCommands: HeroCommand[] = [
+  {
+    key: "skills",
+    label: "skills",
+    copyText: "npx skills add outblock/cadence-lang.org",
+    render: () => (
+      <>
+        <span className={S.cmd}>npx</span>{" "}
+        <span className={S.dim}>skills add</span>{" "}
+        <span className={S.pkg}>outblock/cadence-lang.org</span>
+      </>
+    ),
+    hint: "Install the Cadence skill for your AI coding agent",
+    href: "/docs/ai-tools/skills",
+  },
+  {
+    key: "mcp",
+    label: "mcp",
+    copyText: (client: string) => `npx install-mcp @outblock/cadence-mcp --client ${client}`,
+    render: (client: string) => (
+      <>
+        <span className={S.cmd}>npx</span>{" "}
+        <span className={S.dim}>install-mcp</span>{" "}
+        <span className={S.pkg}>@outblock/cadence-mcp</span>{" "}
+        <span className={S.flag}>--client</span>{" "}
+        <span className={S.pkg}>{client}</span>
+      </>
+    ),
+    hint: "Install the Cadence MCP server",
+    href: "/docs/ai-tools/mcp-server",
+    hasClientSelect: true,
+  },
+  {
+    key: "llms.txt",
+    label: "llms.txt",
+    copyText: "curl -s https://cadence-lang.org/llms.txt",
+    render: () => (
+      <>
+        <span className={S.cmd}>curl</span>{" "}
+        <span className={S.flag}>-s</span>{" "}
+        <span className={S.url}>https://cadence-lang.org/llms.txt</span>
+      </>
+    ),
+    hint: "Fetch Cadence context for LLMs",
+    href: "/llms.txt",
+  },
+  {
+    key: "llms-full.txt",
+    label: "llms-full.txt",
+    copyText: "curl -s https://cadence-lang.org/llms-full.txt",
+    render: () => (
+      <>
+        <span className={S.cmd}>curl</span>{" "}
+        <span className={S.flag}>-s</span>{" "}
+        <span className={S.url}>https://cadence-lang.org/llms-full.txt</span>
+      </>
+    ),
+    hint: "Fetch full Cadence documentation for LLMs",
+    href: "/llms-full.txt",
+  },
+];
+
 function Home() {
   const highlightedCode = Route.useLoaderData();
   const [copied, setCopied] = useState(false);
+  const [activeCmd, setActiveCmd] = useState(0);
+  const [mcpClient, setMcpClient] = useState<string>(mcpClients[0].value);
+  const [typingKey, setTypingKey] = useState(0);
+
+  const current = heroCommands[activeCmd];
+  const commandText = typeof current.copyText === "function"
+    ? current.copyText(mcpClient)
+    : current.copyText;
 
   const copyCommand = () => {
-    navigator.clipboard.writeText("npx skills add outblock/cadence-lang.org");
+    navigator.clipboard.writeText(commandText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -157,51 +306,35 @@ function Home() {
                 </p>
 
                 <div className="flex items-center gap-3 mb-8">
-                  <a
-                    href="/docs/ai-tools/skills"
-                    className="text-xs font-mono text-[var(--accent)] hover:underline underline-offset-4"
-                  >
-                    skills
-                  </a>
-                  <span className="text-neutral-300 dark:text-neutral-700">·</span>
-                  <a
-                    href="/docs/ai-tools/mcp-server"
-                    className="text-xs font-mono text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline underline-offset-4"
-                  >
-                    mcp
-                  </a>
-                  <span className="text-neutral-300 dark:text-neutral-700">·</span>
-                  <a
-                    href="/llms.txt"
-                    className="text-xs font-mono text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline underline-offset-4"
-                  >
-                    llms.txt
-                  </a>
-                  <span className="text-neutral-300 dark:text-neutral-700">·</span>
-                  <a
-                    href="/llms-full.txt"
-                    className="text-xs font-mono text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline underline-offset-4"
-                  >
-                    llms-full.txt
-                  </a>
+                  {heroCommands.map((cmd, i) => (
+                    <React.Fragment key={cmd.key}>
+                      {i > 0 && <span className="text-neutral-300 dark:text-neutral-700">·</span>}
+                      <button
+                        onClick={() => { setActiveCmd(i); setCopied(false); setTypingKey(k => k + 1); }}
+                        className={`text-xs font-mono underline-offset-4 transition-colors ${
+                          activeCmd === i
+                            ? "text-[var(--accent)] underline"
+                            : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline"
+                        }`}
+                      >
+                        {cmd.label}
+                      </button>
+                    </React.Fragment>
+                  ))}
                 </div>
 
-                {/* Install Skill Command - The primary CTA */}
+                {/* Command Box */}
                 <div className="relative w-full max-w-lg mb-2 group">
                   <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)]/30 to-blue-500/30 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
                   <div className="relative flex items-center justify-between bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl p-2 pl-6 shadow-2xl overflow-hidden backdrop-blur-xl transition-colors duration-300">
-                    <div className="flex items-center gap-3 font-mono text-sm sm:text-base">
-                      <span className="text-neutral-400 dark:text-[#666] select-none">$</span>
-                      <span className="text-neutral-900 dark:text-white font-medium">
-                        npx skills add{" "}
-                        <span className="text-green-600 dark:text-[var(--accent)]">
-                          outblock/cadence-lang.org
-                        </span>
-                      </span>
-                    </div>
+                    <CommandDisplay
+                      render={current.render(mcpClient)}
+                      text={commandText}
+                      typingKey={typingKey}
+                    />
                     <button
                       onClick={copyCommand}
-                      className="p-3 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors text-neutral-500 dark:text-[#888] hover:text-black dark:hover:text-white"
+                      className="p-3 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors text-neutral-500 dark:text-[#888] hover:text-black dark:hover:text-white shrink-0"
                     >
                       {copied ? (
                         <Check className="w-5 h-5 text-[var(--accent)]" />
@@ -211,9 +344,31 @@ function Home() {
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-neutral-400 dark:text-neutral-600 font-mono mb-10">
-                  Install the Cadence skill for your AI coding agent
-                </p>
+                <div className="flex items-center gap-3 mb-10">
+                  {current.hasClientSelect && (
+                    <div className="relative">
+                      <select
+                        value={mcpClient}
+                        onChange={(e) => { setMcpClient(e.target.value); setCopied(false); setTypingKey(k => k + 1); }}
+                        className="appearance-none text-xs font-mono bg-neutral-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg pl-3 pr-7 py-1.5 text-neutral-700 dark:text-neutral-300 outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/30 transition-all cursor-pointer hover:border-black/20 dark:hover:border-white/20"
+                      >
+                        {mcpClients.map((c) => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                      <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 rotate-90 text-neutral-400 dark:text-neutral-500 pointer-events-none" />
+                    </div>
+                  )}
+                  <span className="text-xs text-neutral-400 dark:text-neutral-600 font-mono">
+                    {current.hint}
+                  </span>
+                  <a
+                    href={current.href}
+                    className="text-xs font-mono text-[var(--accent)] hover:underline underline-offset-4 shrink-0 flex items-center gap-1"
+                  >
+                    docs <ArrowRight className="w-3 h-3" />
+                  </a>
+                </div>
 
                 <div className="flex flex-wrap items-center gap-6">
                   <Link
