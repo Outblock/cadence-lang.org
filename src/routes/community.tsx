@@ -7,11 +7,30 @@ export const Route = createFileRoute('/community')({
   component: Community,
   head: () => ({
     meta: [
-      { title: 'Cadence: Community' },
+      { title: 'Community | Cadence' },
       {
         name: 'description',
         content: 'Join the Cadence community and contribute to the future of smart contract development.',
       },
+      { property: 'og:title', content: 'Community | Cadence' },
+      {
+        property: 'og:description',
+        content: 'Join the Cadence community and contribute to the future of smart contract development.',
+      },
+      { property: 'og:url', content: 'https://cadence-lang.org/community' },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:image', content: 'https://cadence-lang.org/og/home' },
+      { property: 'og:site_name', content: 'Cadence' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: 'Community | Cadence' },
+      {
+        name: 'twitter:description',
+        content: 'Join the Cadence community and contribute to the future of smart contract development.',
+      },
+      { name: 'twitter:image', content: 'https://cadence-lang.org/og/home' },
+    ],
+    links: [
+      { rel: 'canonical', href: 'https://cadence-lang.org/community' },
     ],
   }),
 });

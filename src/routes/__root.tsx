@@ -19,6 +19,9 @@ export const Route = createRootRoute({
         content:
           'Cadence is the resource-oriented programming language for building secure smart contracts on Flow.',
       },
+      { property: 'og:site_name', content: 'Cadence' },
+      { property: 'og:locale', content: 'en_US' },
+      { name: 'theme-color', content: '#00D87E' },
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
