@@ -98,7 +98,7 @@ function Home() {
         className="bg-fd-primary text-fd-primary-foreground px-4 py-2.5 rounded-full text-sm font-medium"
       >
         <MessageCircleIcon className="size-4" />
-        Cadence AI
+        Ask Cadence AI
       </AISearchTrigger>
       <HomeLayout {...baseOptions()}>
         <div className="relative min-h-screen overflow-x-hidden bg-[#FAFAFA] dark:bg-black text-neutral-900 dark:text-white selection:bg-[var(--accent)] selection:text-black font-sans transition-colors duration-300">

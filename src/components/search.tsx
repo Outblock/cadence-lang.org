@@ -379,17 +379,18 @@ export function AISearchPanel() {
       <Presence present={open}>
         <div
           className={cn(
-            'fixed z-40 overflow-hidden',
+            'fixed z-40 overflow-hidden transition-[width,left,right]',
             'top-16 bottom-20 end-5',
+            'max-sm:inset-x-2 max-sm:w-auto', // Full width on mobile with margins
             'rounded-2xl border bg-fd-card text-fd-card-foreground shadow-2xl',
             open ? 'animate-fd-dialog-in' : 'animate-fd-dialog-out',
           )}
-          style={{ width: panelWidth }}
+          style={{ width: typeof window !== 'undefined' && window.innerWidth < 640 ? undefined : panelWidth }}
         >
-          {/* Drag handle on the left edge — grip dots as visual hint */}
+          {/* Drag handle on the left edge — visible only on desktop */}
           <div
             onMouseDown={onDragStart}
-            className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-10 flex items-center justify-center group"
+            className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-10 hidden sm:flex items-center justify-center group"
             title="Drag to resize"
           >
             {/* Grip indicator: 3 short horizontal lines */}
