@@ -1,14 +1,17 @@
 {
-  "name": "cadence-docs-mcp-server",
+  "name": "cadence-mcp-server",
   "version": "1.0.0",
-  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "hono": "^4.12.1",
+    "zod": "^3.25.36"
+  },
   "private": true,
   "scripts": {
     "start": "bun src/index.ts",
-    "build": "bun build src/index.ts --outdir=dist --target=node"
+    "start:http": "bun src/http.ts",
+    "build": "bun build src/index.ts --outdir=dist --target=node",
+    "build:http": "bun build src/http.ts --outdir=dist --target=node"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "zod": "^3.25.36"
-  }
+  "type": "module"
 }

@@ -1,0 +1,77 @@
+---
+title: MCP Server
+---
+
+The Cadence MCP (Model Context Protocol) server exposes documentation search and Cadence language server capabilities over HTTP. AI agents can call these tools to search docs, check code for errors, inspect types, and more.
+
+**Endpoint**: `https://cadence-mcp.up.railway.app`
+
+## Available tools
+
+| Tool | Description |
+|---|---|
+| `search_docs` | Search Cadence documentation by keyword |
+| `get_doc` | Get full content of a documentation page |
+| `cadence_check` | Check Cadence code for syntax and type errors |
+| `cadence_hover` | Get type information for a symbol at a position |
+| `cadence_definition` | Find where a symbol is defined |
+| `cadence_symbols` | List all symbols in a piece of Cadence code |
+
+## Configure in Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "cadence": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://cadence-mcp.up.railway.app/mcp"]
+    }
+  }
+}
+```
+
+## Configure in Claude Code
+
+```bash
+claude mcp add cadence-mcp -- npx -y mcp-remote https://cadence-mcp.up.railway.app/mcp
+```
+
+## Use directly via HTTP
+
+The MCP endpoint uses [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http). You can call tools directly:
+
+```bash
+# List available tools
+curl -X POST https://cadence-mcp.up.railway.app/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+
+# Check Cadence code for errors
+curl -X POST https://cadence-mcp.up.railway.app/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{
+    "jsonrpc":"2.0","id":1,
+    "method":"tools/call",
+    "params":{
+      "name":"cadence_check",
+      "arguments":{"code":"access(all) fun greet(): String { return \"Hi\" }"}
+    }
+  }'
+```
+
+## Run locally (Stdio)
+
+If you prefer a local MCP server (e.g. for offline use), clone the repo and run:
+
+```bash
+git clone https://github.com/onflow/cadence-lang.org
+cd cadence-lang.org/mcp-server
+bun install
+bun run start
+```
+
+This requires the [Flow CLI](https://developers.flow.com/tools/flow-cli) installed locally for LSP tools.

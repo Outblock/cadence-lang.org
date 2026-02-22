@@ -52,6 +52,7 @@
 body {
   font-family: 'Geist', sans-serif;
   -webkit-font-smoothing: antialiased;
+  background-color: var(--bg);
 }
 
 /* ════════ GLOBAL ACCENT & HIGHLIGHT ════════ */

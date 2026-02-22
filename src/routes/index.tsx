@@ -130,12 +130,17 @@ function Home() {
 
                 <div className="flex items-center gap-3 mb-8">
                   <a
-                    href="https://skills.sh"
-                    target="_blank"
-                    rel="noreferrer"
+                    href="/docs/ai-tools/skills"
                     className="text-xs font-mono text-[var(--accent)] hover:underline underline-offset-4"
                   >
-                    skills.sh
+                    skills
+                  </a>
+                  <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                  <a
+                    href="/docs/ai-tools/mcp-server"
+                    className="text-xs font-mono text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline underline-offset-4"
+                  >
+                    mcp
                   </a>
                   <span className="text-neutral-300 dark:text-neutral-700">·</span>
                   <a

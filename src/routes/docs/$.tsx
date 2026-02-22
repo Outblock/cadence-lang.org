@@ -140,27 +140,6 @@ function Page() {
       <DocsLayout
         {...baseOptions()}
         tree={data.pageTree}
-        sidebar={{
-          footer: (
-            <div className="px-3 pb-2 border-t border-fd-border mt-2 pt-3">
-              <p className="text-[10px] font-mono text-fd-muted-foreground uppercase tracking-widest mb-2 opacity-60">
-                AI Context
-              </p>
-              <a
-                href="/llms.txt"
-                className="flex items-center gap-2 py-1 text-xs font-mono text-fd-muted-foreground hover:text-fd-primary transition-colors"
-              >
-                llms.txt
-              </a>
-              <a
-                href="/llms-full.txt"
-                className="flex items-center gap-2 py-1 text-xs font-mono text-fd-muted-foreground hover:text-fd-primary transition-colors"
-              >
-                llms-full.txt
-              </a>
-            </div>
-          ),
-        }}
       >
         <Suspense>
           {clientLoader.useContent(data.path, {

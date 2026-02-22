@@ -6,8 +6,8 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: (
         <div className="flex items-center">
-          <img src="/img/logo.svg" alt="Cadence" className="h-8 block dark:hidden" />
-          <img src="/img/logo-dark.svg" alt="Cadence" className="h-8 hidden dark:block" />
+          <img src="/img/logo.svg" alt="Cadence" className="h-6 block dark:hidden" />
+          <img src="/img/logo-dark.svg" alt="Cadence" className="h-6 hidden dark:block" />
         </div>
       ),
     },
@@ -24,6 +24,7 @@ export function baseOptions(): BaseLayoutProps {
         external: true,
       },
       { text: 'Language Reference', url: '/docs/language' },
+      { text: 'AI Tools', url: '/docs/ai-tools' },
       {
         type: 'icon',
         text: 'GitHub',
