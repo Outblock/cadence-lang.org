@@ -326,7 +326,7 @@ function Home() {
                   src="https://www.youtube.com/embed/6SE8bvTmmQc?si=DTMmGOHf3wyqIDTF&autoplay=0&rel=0&modestbranding=1"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
-                  className="absolute top-0 left-0 w-full h-full grayscale hover:grayscale-0 transition duration-700"
+                  className="absolute top-0 left-0 w-full h-full"
                 ></iframe>
               </div>
             </div>
