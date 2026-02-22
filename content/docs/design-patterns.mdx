@@ -410,7 +410,7 @@ transaction {
 
 ### Problem
 
-An account must be given a [capability](./language/capabilities) to an object stored in another account.
+An account must be given a [capability](/docs/language/capabilities) to an object stored in another account.
 To create (issue) the capability, the transaction must be signed by a key which has access to the target account.
 
 To transfer / deliver the capability to the other account, the transaction also needs write access to that one.
@@ -423,7 +423,7 @@ from one account and delivering it to the other.
 ### Solution
 
 The solution to the bootstrapping problem in Cadence is provided by the
-[Inbox API](./language/accounts/inbox).
+[Inbox API](/docs/language/accounts/inbox).
 
 Account A (which we will call the provider) creates the capability they wish to send to account B
 (which we will call the recipient),
