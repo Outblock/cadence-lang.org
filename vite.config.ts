@@ -23,8 +23,6 @@ export default defineConfig({
     react(),
     nitro({
       preset: 'vercel',
-      // Trace @takumi-rs native binaries into Vercel serverless functions
-      traceDeps: [/takumi/],
     }),
   ],
 });
