@@ -2,6 +2,7 @@ import { createFileRoute, notFound } from '@tanstack/react-router';
 import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import { createServerFn } from '@tanstack/react-start';
 import { source, getPageImage } from '@/lib/source';
+import { SITE_URL } from '@/lib/site';
 import browserCollections from 'fumadocs-mdx:collections/browser';
 import {
   DocsBody,
@@ -36,7 +37,7 @@ export const Route = createFileRoute('/docs/$')({
     const description =
       loaderData?.description ||
       'Cadence programming language documentation';
-    const url = `https://cadence-lang.org/docs/${loaderData?.slugs?.join('/') || ''}`;
+    const url = `${SITE_URL}/docs/${loaderData?.slugs?.join('/') || ''}`;
 
     const ogImage = loaderData?.ogImage || '';
 
@@ -48,13 +49,13 @@ export const Route = createFileRoute('/docs/$')({
         { property: 'og:description', content: description },
         { property: 'og:url', content: url },
         { property: 'og:type', content: 'article' },
-        { property: 'og:image', content: `https://cadence-lang.org${ogImage}` },
+        { property: 'og:image', content: `${SITE_URL}${ogImage}` },
         { property: 'og:site_name', content: 'Cadence' },
-        { property: 'og:logo', content: 'https://cadence-lang.org/img/logo.svg' },
+        { property: 'og:logo', content: `${SITE_URL}/img/logo.svg` },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: title },
         { name: 'twitter:description', content: description },
-        { name: 'twitter:image', content: `https://cadence-lang.org${ogImage}` },
+        { name: 'twitter:image', content: `${SITE_URL}${ogImage}` },
       ],
       links: [
         { rel: 'canonical', href: url },
@@ -95,7 +96,7 @@ const clientLoader = browserCollections.docs.createClientLoader({
       '@type': 'TechArticle',
       headline: frontmatter.title,
       description: frontmatter.description || '',
-      url: props.pageUrl ? `https://cadence-lang.org${props.pageUrl}` : '',
+      url: props.pageUrl ? `${SITE_URL}${props.pageUrl}` : '',
       author: {
         '@type': 'Organization',
         name: 'Flow Foundation',
@@ -103,7 +104,7 @@ const clientLoader = browserCollections.docs.createClientLoader({
       publisher: {
         '@type': 'Organization',
         name: 'Cadence',
-        url: 'https://cadence-lang.org',
+        url: SITE_URL,
       },
     };
 

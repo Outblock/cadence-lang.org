@@ -17,6 +17,7 @@ import {
   MessageCircleIcon,
 } from "lucide-react";
 import { MorphingAscii } from "@/components/MorphingAscii";
+import { SITE_URL } from "@/lib/site";
 import {
   AISearch,
   AISearchPanel,
@@ -157,11 +158,11 @@ export const Route = createFileRoute("/")({
         content:
           'The safest, most composable language for Web3. Built for AI-native development with resource ownership and capability-based security.',
       },
-      { property: 'og:url', content: 'https://cadence-lang.org' },
+      { property: 'og:url', content: SITE_URL },
       { property: 'og:type', content: 'website' },
-      { property: 'og:image', content: 'https://cadence-lang.org/og/home' },
+      { property: 'og:image', content: `${SITE_URL}/og/home` },
       { property: 'og:site_name', content: 'Cadence' },
-      { property: 'og:logo', content: 'https://cadence-lang.org/img/logo.svg' },
+      { property: 'og:logo', content: `${SITE_URL}/img/logo.svg` },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'Cadence - Build the Future of Consumer DeFi' },
       {
@@ -169,7 +170,7 @@ export const Route = createFileRoute("/")({
         content:
           'The safest, most composable language for Web3. Built for AI-native development with resource ownership and capability-based security.',
       },
-      { name: 'twitter:image', content: 'https://cadence-lang.org/og/home' },
+      { name: 'twitter:image', content: `${SITE_URL}/og/home` },
     ],
   }),
 });

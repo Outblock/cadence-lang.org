@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { HomeLayout } from 'fumadocs-ui/layouts/home';
 import { baseOptions } from '@/lib/layout.shared';
 import { Github, MessageSquare, BookOpen, Users, ArrowRight, Lightbulb, Zap } from 'lucide-react';
+import { SITE_URL } from '@/lib/site';
 
 export const Route = createFileRoute('/community')({
   component: Community,
@@ -17,21 +18,21 @@ export const Route = createFileRoute('/community')({
         property: 'og:description',
         content: 'Join the Cadence community and contribute to the future of smart contract development.',
       },
-      { property: 'og:url', content: 'https://cadence-lang.org/community' },
+      { property: 'og:url', content: `${SITE_URL}/community` },
       { property: 'og:type', content: 'website' },
-      { property: 'og:image', content: 'https://cadence-lang.org/og/home' },
+      { property: 'og:image', content: `${SITE_URL}/og/home` },
       { property: 'og:site_name', content: 'Cadence' },
-      { property: 'og:logo', content: 'https://cadence-lang.org/img/logo.svg' },
+      { property: 'og:logo', content: `${SITE_URL}/img/logo.svg` },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'Community | Cadence' },
       {
         name: 'twitter:description',
         content: 'Join the Cadence community and contribute to the future of smart contract development.',
       },
-      { name: 'twitter:image', content: 'https://cadence-lang.org/og/home' },
+      { name: 'twitter:image', content: `${SITE_URL}/og/home` },
     ],
     links: [
-      { rel: 'canonical', href: 'https://cadence-lang.org/community' },
+      { rel: 'canonical', href: `${SITE_URL}/community` },
     ],
   }),
 });
