@@ -417,9 +417,26 @@ export function AISearchPanel() {
 }
 
 
+const suggestedQuestions = [
+  'What are resources in Cadence?',
+  'How do capabilities work?',
+  'How do I write a fungible token contract?',
+  'What is account storage?',
+  'How are transactions structured?',
+  'What are pre and post conditions?',
+  'How do I emit and listen to events?',
+  'What is the difference between structs and resources?',
+];
+
+function getRandomQuestions(count: number) {
+  const shuffled = [...suggestedQuestions].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
 export function AISearchPanelList({ className, style, ...props }: ComponentProps<'div'>) {
   const chat = useChatContext();
   const messages = chat.messages.filter((msg) => msg.role !== 'system');
+  const [suggestions] = useState(() => getRandomQuestions(4));
 
   return (
     <List
@@ -432,9 +449,24 @@ export function AISearchPanelList({ className, style, ...props }: ComponentProps
       {...props}
     >
       {messages.length === 0 ? (
-        <div className="text-sm text-fd-muted-foreground/80 size-full flex flex-col items-center justify-center text-center gap-2">
-          <MessageCircleIcon fill="currentColor" stroke="none" />
-          <p onClick={(e) => e.stopPropagation()}>Start a new chat below.</p>
+        <div className="text-sm size-full flex flex-col items-center justify-center text-center gap-3 px-3">
+          <MessageCircleIcon className="text-fd-muted-foreground/80" fill="currentColor" stroke="none" />
+          <p className="text-fd-muted-foreground/80" onClick={(e) => e.stopPropagation()}>Ask anything about Cadence</p>
+          <div className="flex flex-col gap-1.5 w-full max-w-xs mt-1">
+            {suggestions.map((q) => (
+              <button
+                key={q}
+                type="button"
+                className="text-left text-xs px-3 py-2 rounded-lg border border-fd-border hover:bg-fd-accent hover:text-fd-accent-foreground transition-colors text-fd-muted-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void chat.sendMessage({ text: q });
+                }}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="flex flex-col px-3 gap-4">
