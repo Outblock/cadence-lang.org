@@ -32,6 +32,25 @@ function FlowCoin() {
   );
 }
 
+function CadenceLogo3D() {
+  const { scene } = useGLTF('/assets/logo.glb');
+
+  useEffect(() => {
+    scene.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.material.roughness = 0.4;
+        child.material.metalness = 0.6;
+      }
+    });
+  }, [scene]);
+
+  return (
+    <group position={[0, 0, 0]}>
+      <primitive object={scene} scale={1.2} />
+    </group>
+  );
+}
+
 function CryptoKitty3D() {
   const { scene } = useGLTF('/assets/cryptokitty.glb');
 
@@ -51,6 +70,7 @@ function CryptoKitty3D() {
   );
 }
 
+useGLTF.preload('/assets/logo.glb');
 useGLTF.preload('/assets/cryptokitty.glb');
 
 function AsciiScene({ activeCycleIdx, fgColor }: { activeCycleIdx: number; fgColor: string }) {
@@ -63,9 +83,12 @@ function AsciiScene({ activeCycleIdx, fgColor }: { activeCycleIdx: number; fgCol
       <Suspense fallback={null}>
         <Float speed={2.5} rotationIntensity={0.2} floatIntensity={0.5}>
           <group visible={activeCycleIdx === 0}>
-            <FlowCoin />
+            <CadenceLogo3D />
           </group>
           <group visible={activeCycleIdx === 1}>
+            <FlowCoin />
+          </group>
+          <group visible={activeCycleIdx === 2}>
             <CryptoKitty3D />
           </group>
         </Float>
@@ -105,7 +128,7 @@ export function MorphingAscii() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveCycleIdx(prev => (prev + 1) % 2);
+      setActiveCycleIdx(prev => (prev + 1) % 3);
     }, 6000);
     return () => clearInterval(interval);
   }, []);

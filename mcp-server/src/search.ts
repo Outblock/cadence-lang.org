@@ -1,5 +1,6 @@
 import { readdir, readFile, access } from 'node:fs/promises';
 import { join, extname, basename } from 'node:path';
+import { create, insert, search } from '@orama/orama';
 
 const DOCS_DIR =
   process.env.DOCS_DIR || join(import.meta.dirname, '..', '..', 'content', 'docs');
@@ -24,7 +25,17 @@ interface DocEntry {
   content: string;
 }
 
-let indexCache: DocEntry[] | null = null;
+const db = await create({
+  schema: {
+    path: 'string' as const,
+    title: 'string' as const,
+    description: 'string' as const,
+    content: 'string' as const,
+  },
+});
+
+let indexBuilt = false;
+const docsByPath = new Map<string, DocEntry>();
 
 async function walk(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -54,7 +65,10 @@ function stripFrontmatter(content: string): string {
 }
 
 export async function buildIndex(): Promise<DocEntry[]> {
-  if (indexCache) return indexCache;
+  if (indexBuilt) {
+    const all = await search(db, { term: '', limit: 100000 });
+    return all.hits.map((h) => h.document as DocEntry);
+  }
 
   const files = await walk(DOCS_DIR);
   const entries: DocEntry[] = [];
@@ -68,37 +82,30 @@ export async function buildIndex(): Promise<DocEntry[]> {
     const dir = rel.replace(/\/[^/]+$/, '');
     const docPath = name === 'index' ? `/docs${dir}` : `/docs${dir}/${name}`;
 
-    entries.push({ path: docPath, title, description, content });
+    const doc: DocEntry = { path: docPath, title, description, content };
+    entries.push(doc);
+    docsByPath.set(docPath, doc);
+    await insert(db, doc);
   }
 
-  indexCache = entries;
+  indexBuilt = true;
   return entries;
 }
 
 export async function searchDocs(query: string, topN = 5): Promise<DocEntry[]> {
-  const index = await buildIndex();
-  const terms = query.toLowerCase().split(/\s+/);
+  await buildIndex();
 
-  const scored = index.map((doc) => {
-    const text = `${doc.title} ${doc.description} ${doc.content}`.toLowerCase();
-    let score = 0;
-    for (const term of terms) {
-      if (doc.title.toLowerCase().includes(term)) score += 10;
-      if (doc.description.toLowerCase().includes(term)) score += 5;
-      const matches = text.split(term).length - 1;
-      score += Math.min(matches, 20);
-    }
-    return { doc, score };
+  const results = await search(db, {
+    term: query,
+    limit: topN,
+    tolerance: 1,
+    boost: { title: 3, description: 2 },
   });
 
-  return scored
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topN)
-    .map((s) => s.doc);
+  return results.hits.map((h) => h.document as DocEntry);
 }
 
 export async function getDoc(path: string): Promise<DocEntry | null> {
-  const index = await buildIndex();
-  return index.find((d) => d.path === path) || null;
+  await buildIndex();
+  return docsByPath.get(path) ?? null;
 }
