@@ -18,35 +18,29 @@
 }
 
 :root {
-  --bg: #FAFAFA;
+  --bg: #f5f5f5;
   --foreground: #09090b;
   --muted: #71717a;
   --accent: #008556;
-  /* Restrained Green */
   --border: rgba(0, 0, 0, 0.1);
   --grid: rgba(0, 0, 0, 0.03);
 
   /* Fumadocs Theme Overrides — light mode */
   --color-fd-primary: #008556;
   --color-fd-primary-foreground: #ffffff;
-  --color-fd-background: #FAFAFA;
-  --color-fd-foreground: #09090b;
 }
 
 .dark {
-  --bg: #000000;
+  --bg: #0a0a0a;
   --foreground: #ffffff;
   --muted: #888888;
   --accent: #00FF94;
-  /* Cadence Green */
   --border: rgba(255, 255, 255, 0.1);
   --grid: rgba(255, 255, 255, 0.03);
 
   /* Fumadocs Theme Overrides — dark mode */
   --color-fd-primary: #00FF94;
   --color-fd-primary-foreground: #000000;
-  --color-fd-background: #000000;
-  --color-fd-foreground: #ffffff;
 }
 
 body {
