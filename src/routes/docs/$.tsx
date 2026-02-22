@@ -129,13 +129,13 @@ function Page() {
   return (
     <AISearch>
       <AISearchPanel />
-      {/* Floating Ask AI button — bottom-right, above all content */}
+      {/* Floating Cadence AI button — bottom-right */}
       <AISearchTrigger
         position="float"
         className="bg-fd-primary text-fd-primary-foreground px-4 py-2.5 rounded-full text-sm font-medium"
       >
         <MessageCircleIcon className="size-4" />
-        Ask AI
+        Ask Cadence AI
       </AISearchTrigger>
       <DocsLayout
         {...baseOptions()}

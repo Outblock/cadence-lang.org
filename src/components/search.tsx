@@ -40,13 +40,7 @@ export function AISearchPanelHeader({ className, ...props }: ComponentProps<'div
       {...props}
     >
       <div className="px-3 py-2 flex-1">
-        <p className="text-sm font-medium mb-2">Ask AI</p>
-        <p className="text-xs text-fd-muted-foreground">
-          Powered by{' '}
-          <a href="https://anthropic.com" target="_blank" rel="noreferrer noopener">
-            Claude
-          </a>
-        </p>
+        <p className="text-sm font-medium">Cadence AI</p>
       </div>
 
       <button
@@ -392,12 +386,19 @@ export function AISearchPanel() {
           )}
           style={{ width: panelWidth }}
         >
-          {/* Drag handle on the left edge */}
+          {/* Drag handle on the left edge — grip dots as visual hint */}
           <div
             onMouseDown={onDragStart}
-            className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize z-10 hover:bg-fd-primary/30 transition-colors rounded-l-2xl group"
+            className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-10 flex items-center justify-center group"
             title="Drag to resize"
-          />
+          >
+            {/* Grip indicator: 3 short horizontal lines */}
+            <div className="flex flex-col gap-[3px] opacity-20 group-hover:opacity-60 transition-opacity">
+              <div className="w-2 h-px bg-current rounded-full" />
+              <div className="w-2 h-px bg-current rounded-full" />
+              <div className="w-2 h-px bg-current rounded-full" />
+            </div>
+          </div>
           <div className="flex flex-col h-full p-2">
             <AISearchPanelHeader />
             <AISearchPanelList className="flex-1 min-h-0" />
