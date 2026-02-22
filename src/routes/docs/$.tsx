@@ -99,7 +99,12 @@ const clientLoader = browserCollections.docs.createClientLoader({
     };
 
     return (
-      <DocsPage toc={toc} {...props}>
+      <DocsPage
+        toc={toc}
+        tableOfContent={{
+          style: 'clerk',
+        }}
+        {...props}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
