@@ -14,11 +14,11 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Cadence - Build the Future of Consumer DeFi' },
+      { title: 'Cadence - Smart Contracts Built for the AI Era' },
       {
         name: 'description',
         content:
-          'Cadence is the resource-oriented programming language for building secure smart contracts on Flow.',
+          'A safe, resource-oriented programming language built for the Flow blockchain. Designed for digital ownership and optimized for AI-driven development.',
       },
       { property: 'og:site_name', content: 'Cadence' },
       { property: 'og:logo', content: `${SITE_URL}/img/logo.svg` },

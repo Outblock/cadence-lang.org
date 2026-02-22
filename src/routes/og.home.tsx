@@ -60,7 +60,7 @@ export const Route = createFileRoute('/og/home')({
                     lineHeight: 1.2,
                   }}
                 >
-                  The Safest, Most Composable Language for Web3
+                  Smart Contracts Built for the AI Era
                 </div>
                 <div
                   style={{
@@ -71,7 +71,7 @@ export const Route = createFileRoute('/og/home')({
                     maxWidth: '900px',
                   }}
                 >
-                  Resource ownership, capability-based security, and composable contracts — built for AI-native development.
+                  A safe, resource-oriented programming language built for the Flow blockchain. Designed for digital ownership and optimized for AI-driven development.
                 </div>
               </div>
               <div

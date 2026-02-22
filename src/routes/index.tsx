@@ -146,17 +146,17 @@ export const Route = createFileRoute("/")({
   loader: () => getHighlightedCode(),
   head: () => ({
     meta: [
-      { title: 'Cadence - Build the Future of Consumer DeFi' },
+      { title: 'Cadence - Smart Contracts Built for the AI Era' },
       {
         name: 'description',
         content:
-          'Cadence is the resource-oriented programming language for building secure smart contracts on Flow.',
+          'Cadence is a safe, resource-oriented programming language built for the Flow blockchain. Designed for digital ownership and optimized for AI-driven development.',
       },
-      { property: 'og:title', content: 'Cadence - Build the Future of Consumer DeFi' },
+      { property: 'og:title', content: 'Cadence - Smart Contracts Built for the AI Era' },
       {
         property: 'og:description',
         content:
-          'The safest, most composable language for Web3. Built for AI-native development with resource ownership and capability-based security.',
+          'A safe, resource-oriented programming language built for the Flow blockchain. Designed for digital ownership and optimized for AI-driven development.',
       },
       { property: 'og:url', content: SITE_URL },
       { property: 'og:type', content: 'website' },
@@ -164,11 +164,11 @@ export const Route = createFileRoute("/")({
       { property: 'og:site_name', content: 'Cadence' },
       { property: 'og:logo', content: `${SITE_URL}/img/logo.svg` },
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: 'Cadence - Build the Future of Consumer DeFi' },
+      { name: 'twitter:title', content: 'Cadence - Smart Contracts Built for the AI Era' },
       {
         name: 'twitter:description',
         content:
-          'The safest, most composable language for Web3. Built for AI-native development with resource ownership and capability-based security.',
+          'A safe, resource-oriented programming language built for the Flow blockchain. Designed for digital ownership and optimized for AI-driven development.',
       },
       { name: 'twitter:image', content: `${SITE_URL}/og/home` },
     ],
