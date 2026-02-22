@@ -135,11 +135,7 @@ export function MorphingAscii() {
         )}
         <Canvas
           camera={{ position: [0, 0, 6.5], fov: 50 }}
-          // On mobile: disable R3F's entire event system so the canvas
-          // doesn't swallow touch events — page scroll works normally.
-          // On desktop: keep events active for OrbitControls drag.
-          events={isMobile ? { enabled: false } as never : undefined}
-          style={isMobile ? { touchAction: 'pan-y' } : { touchAction: 'none' }}
+          style={{ touchAction: isMobile ? 'pan-y' : 'none' }}
         >
           <color attach="background" args={['transparent']} />
           <AsciiScene
@@ -155,6 +151,19 @@ export function MorphingAscii() {
           />
         </Canvas>
       </div>
+
+      {/* Mobile: transparent overlay above ascii-wrapper to intercept touches
+          and pass vertical scroll to the browser natively via pan-y */}
+      {isMobile && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            touchAction: 'pan-y',
+          }}
+        />
+      )}
     </div>
   );
 }
