@@ -118,13 +118,6 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* ════════ SHIKI ════════ */
-pre.shiki {
-  background-color: transparent !important;
-  border-radius: 0 !important;
-  font-size: 0.85rem !important;
-  line-height: 1.7 !important;
-}
 
 .feature-line {
   position: relative;
@@ -142,17 +135,6 @@ pre.shiki {
   opacity: 0.5;
 }
 
-/* ════════ SHIKI DUAL THEME ════════ */
-.shiki,
-.shiki span {
-  color: var(--shiki-light) !important;
-  background-color: transparent !important;
-}
-
-.dark .shiki,
-.dark .shiki span {
-  color: var(--shiki-dark) !important;
-}
 
 /* ════════ ANIMATIONS ════════ */
 @keyframes fadeIn {
