@@ -292,17 +292,14 @@ function Home() {
               {/* Left Column: Copy & CTA */}
               <div className="flex flex-col items-start text-left">
 
-                <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-8">
-                  The Safest, Most <br className="md:hidden" />
+                <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-8 leading-tight">
+                  Smart Contracts Built for <br className="md:hidden" />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent)] to-blue-500">
-                    Composable
+                    the AI Era.
                   </span>
-                  <br />
-                  Language for Web3.
                 </h1>
-
-                <p className="max-w-xl text-lg md:text-xl text-neutral-600 dark:text-[#888] leading-relaxed mb-4">
-                  Built for AI-native development. Cadence gives AI agents and human developers the same first-class primitives — resource ownership, capability-based security, and composable contracts — natively understood through MCP and skills.
+                <p className="text-lg text-neutral-600 dark:text-neutral-400 mb-8 max-w-lg leading-relaxed">
+                  Cadence is a safe, resource-oriented programming language built for the Flow blockchain. Designed for digital ownership and optimized for AI-driven development.
                 </p>
 
                 <div className="flex items-center gap-3 mb-8">
@@ -312,8 +309,8 @@ function Home() {
                       <button
                         onClick={() => { setActiveCmd(i); setCopied(false); setTypingKey(k => k + 1); }}
                         className={`text-xs font-mono underline-offset-4 transition-colors ${activeCmd === i
-                            ? "text-[var(--accent)] underline"
-                            : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline"
+                          ? "text-[var(--accent)] underline"
+                          : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline"
                           }`}
                       >
                         {cmd.label}
