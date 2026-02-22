@@ -311,11 +311,10 @@ function Home() {
                       {i > 0 && <span className="text-neutral-300 dark:text-neutral-700">·</span>}
                       <button
                         onClick={() => { setActiveCmd(i); setCopied(false); setTypingKey(k => k + 1); }}
-                        className={`text-xs font-mono underline-offset-4 transition-colors ${
-                          activeCmd === i
+                        className={`text-xs font-mono underline-offset-4 transition-colors ${activeCmd === i
                             ? "text-[var(--accent)] underline"
                             : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:underline"
-                        }`}
+                          }`}
                       >
                         {cmd.label}
                       </button>
@@ -417,7 +416,7 @@ function Home() {
                   ))}
                 </div>
 
-                <div className="lg:col-span-8 min-w-0">
+                <div className="lg:col-span-8 min-w-0 lg:sticky lg:top-40 lg:self-start h-fit">
                   <div className="border border-black/10 dark:border-white/10 bg-white dark:bg-[#0A0A0A] rounded-xl overflow-hidden shadow-2xl">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-neutral-50 dark:bg-[#111]">
                       <div className="flex gap-2">
