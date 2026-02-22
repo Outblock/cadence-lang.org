@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AsciiRenderer, Float, useTexture, OrbitControls, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -114,8 +114,18 @@ function AsciiScene({ activeCycleIdx, fgColor }: { activeCycleIdx: number; fgCol
 export function MorphingAscii() {
   const [activeCycleIdx, setActiveCycleIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [ready, setReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { resolvedTheme } = useTheme();
+
+  const onCreated = useCallback(() => {
+    // Wait two frames so AsciiRenderer has fully taken over
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setReady(true);
+      });
+    });
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -148,7 +158,13 @@ export function MorphingAscii() {
       ].join(' ')}
     >
       {/* 3D ASCII Canvas */}
-      <div className="absolute inset-0 overflow-hidden lg:overflow-visible ascii-wrapper">
+      <div
+        className="absolute inset-0 overflow-hidden lg:overflow-visible ascii-wrapper"
+        style={{
+          opacity: ready ? 1 : 0,
+          transition: 'opacity 0.3s ease-in',
+        }}
+      >
         {resolvedTheme === 'light' && (
           <style>{`
             .ascii-wrapper > div {
@@ -159,6 +175,7 @@ export function MorphingAscii() {
         <Canvas
           camera={{ position: [0, 0, 6.5], fov: 50 }}
           style={{ touchAction: isMobile ? 'pan-y' : 'none' }}
+          onCreated={onCreated}
         >
           <color attach="background" args={['transparent']} />
           <AsciiScene
