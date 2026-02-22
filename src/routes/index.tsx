@@ -86,7 +86,7 @@ function Home() {
 
   return (
     <HomeLayout {...baseOptions()}>
-      <div className="relative min-h-screen bg-[#FAFAFA] dark:bg-black text-neutral-900 dark:text-white selection:bg-[var(--accent)] selection:text-black font-sans transition-colors duration-300">
+      <div className="relative min-h-screen overflow-x-hidden bg-[#FAFAFA] dark:bg-black text-neutral-900 dark:text-white selection:bg-[var(--accent)] selection:text-black font-sans transition-colors duration-300">
         {/* Subtle Grid Background */}
         <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
@@ -197,7 +197,7 @@ function Home() {
         <section className="relative py-24 px-6 z-10">
           <div className="max-w-7xl mx-auto">
             <div className="grid lg:grid-cols-12 gap-16">
-              <div className="lg:col-span-4 space-y-12">
+              <div className="lg:col-span-4 min-w-0 space-y-12">
                 <h3 className="text-2xl font-bold border-b border-black/10 dark:border-white/10 pb-4">
                   Architectural Pillars
                 </h3>
@@ -214,7 +214,7 @@ function Home() {
                 ))}
               </div>
 
-              <div className="lg:col-span-8">
+              <div className="lg:col-span-8 min-w-0">
                 <div className="border border-black/10 dark:border-white/10 bg-white dark:bg-[#0A0A0A] rounded-xl overflow-hidden shadow-2xl">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-neutral-50 dark:bg-[#111]">
                     <div className="flex gap-2">
