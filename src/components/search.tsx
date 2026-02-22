@@ -328,9 +328,47 @@ export function AISearchTrigger({
   );
 }
 
+const MIN_WIDTH = 320;
+const DEFAULT_WIDTH = 420;
+
 export function AISearchPanel() {
   const { open, setOpen } = useAISearchContext();
   useHotKey();
+
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(DEFAULT_WIDTH);
+
+  const onDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    dragStartWidth.current = panelWidth;
+
+    // Prevent text selection while dragging
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      const dx = dragStartX.current - ev.clientX; // dragging left → wider
+      const maxWidth = Math.floor(window.innerWidth * 0.9);
+      const newWidth = Math.max(MIN_WIDTH, Math.min(maxWidth, dragStartWidth.current + dx));
+      setPanelWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
 
   return (
     <>
@@ -349,11 +387,17 @@ export function AISearchPanel() {
           className={cn(
             'fixed z-40 overflow-hidden',
             'top-16 bottom-20 end-5',
-            'w-[min(calc(100vw-2.5rem),420px)]',
             'rounded-2xl border bg-fd-card text-fd-card-foreground shadow-2xl',
             open ? 'animate-fd-dialog-in' : 'animate-fd-dialog-out',
           )}
+          style={{ width: panelWidth }}
         >
+          {/* Drag handle on the left edge */}
+          <div
+            onMouseDown={onDragStart}
+            className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize z-10 hover:bg-fd-primary/30 transition-colors rounded-l-2xl group"
+            title="Drag to resize"
+          />
           <div className="flex flex-col h-full p-2">
             <AISearchPanelHeader />
             <AISearchPanelList className="flex-1 min-h-0" />
@@ -369,6 +413,7 @@ export function AISearchPanel() {
     </>
   );
 }
+
 
 export function AISearchPanelList({ className, style, ...props }: ComponentProps<'div'>) {
   const chat = useChatContext();
