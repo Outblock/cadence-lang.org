@@ -119,9 +119,8 @@ body {
 }
 
 /* ════════ HOMEPAGE CODE — Shiki dual theme ════════ */
-.homepage-code .shiki span {
-  color: var(--shiki-light) !important;
-}
+/* Light mode: Shiki sets color via inline styles, no CSS needed. */
+/* Dark mode: override inline color with the --shiki-dark variable. */
 .dark .homepage-code .shiki span {
   color: var(--shiki-dark) !important;
 }
