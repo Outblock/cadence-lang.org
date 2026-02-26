@@ -25,6 +25,39 @@ Use this skill whenever you are **writing, reviewing, debugging, or auditing Cad
 
 ---
 
+## AI Tools
+
+Cadence is designed for AI-native development with three integrations:
+
+| Tool | Description |
+|---|---|
+| **Skills** | Install with `npx skills add outblock/cadence-lang.org` |
+| **MCP Server** | `https://cadence-mcp.up.railway.app/mcp` — docs search, code checking, type inspection |
+| **LLM Endpoints** | `/llms.txt` (index) and `/llms-full.txt` (complete docs) |
+
+### MCP Quick Start
+
+**Claude Code:**
+```bash
+claude mcp add cadence-mcp -- npx -y mcp-remote https://cadence-mcp.up.railway.app/mcp
+```
+
+**Claude Desktop / Cursor / Antigravity / OpenCode:**
+```json
+{
+  "mcpServers": {
+    "cadence": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://cadence-mcp.up.railway.app/mcp"]
+    }
+  }
+}
+```
+
+**MCP Tools:** `search_docs`, `get_doc`, `browse_docs`, `cadence_check`, `cadence_hover`, `cadence_definition`, `cadence_symbols`. All LSP tools support mainnet/testnet imports.
+
+---
+
 ## 1. Language Fundamentals
 
 ### Types at a Glance
@@ -152,6 +185,26 @@ let authRef: auth(Withdraw) &Vault = &myVault   // entitled reference
 // From storage
 let r = signer.storage.borrow<auth(Withdraw) &Vault>(from: /storage/vault)
     ?? panic("No vault found")
+```
+
+### Matching Access Modifiers Required for Interface Implementations
+
+Implementation members must use **exactly** the same access modifier as the interface:
+
+```cadence
+access(all) resource interface I {
+    access(account) fun foo()
+}
+
+// BAD — access(all) is more permissive than access(account)
+access(all) resource R: I {
+    access(all) fun foo() {}
+}
+
+// GOOD
+access(all) resource R: I {
+    access(account) fun foo() {}
+}
 ```
 
 ---
@@ -513,26 +566,6 @@ transaction {
 }
 ```
 
-### S8 — Matching Access Modifiers Required for Interface Implementations
-
-Implementation members must use **exactly** the same access modifier as the interface:
-
-```cadence
-access(all) resource interface I {
-    access(account) fun foo()
-}
-
-// BAD — access(all) is more permissive than access(account)
-access(all) resource R: I {
-    access(all) fun foo() {}
-}
-
-// GOOD
-access(all) resource R: I {
-    access(account) fun foo() {}
-}
-```
-
 ---
 
 ## 9. Testing
@@ -830,7 +863,4 @@ Cadence 1.0 (Crescendo upgrade, September 2024) introduced breaking changes. Key
 |---|---|---|
 | `FungibleToken` | `0xee82856bf20e2aa6` | `0x0000000000000002` |
 | `NonFungibleToken` | `0xf8d6e0586b0a20c7` | `0x0000000000000001` |
-| `MetadataViews` | `0xf8d6e0586b0a20c7` | `0x0000000000000001` |
-| `ViewResolver` | `0xf8d6e0586b0a20c7` | `0x0000000000000001` |
-| `Burner` | `0xf8d6e0586b0a20c7` | `0x0000000000000001` |
-| `FlowToken` | `0x0ae53cb6e3f42a79` | `0x0000000000000003` |
+| `MetadataViews` |
