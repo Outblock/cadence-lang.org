@@ -436,7 +436,7 @@ function Home() {
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 mb-10">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-10">
                   {current.hasModeSelect && (
                     <div className="inline-flex text-xs font-mono bg-neutral-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg overflow-hidden">
                       {(["remote", "local"] as const).map((m) => (
@@ -467,7 +467,7 @@ function Home() {
                       <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 rotate-90 text-neutral-400 dark:text-neutral-500 pointer-events-none" />
                     </div>
                   )}
-                  <span className="text-xs text-neutral-400 dark:text-neutral-600 font-mono">
+                  <span className="text-xs text-neutral-400 dark:text-neutral-600 font-mono truncate hidden sm:inline">
                     {current.hint}
                   </span>
                   <a
