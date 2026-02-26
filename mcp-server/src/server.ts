@@ -19,7 +19,7 @@ export async function createServer(lsp?: CadenceLSPClient): Promise<McpServer> {
   if (hasDocs) {
   server.tool(
     'search_docs',
-    'Search Cadence documentation by query',
+    'Search Cadence and Flow documentation by query',
     {
       query: z.string().describe('Search query'),
       top_n: z.number().optional().describe('Number of results (default 5)'),
@@ -46,8 +46,8 @@ export async function createServer(lsp?: CadenceLSPClient): Promise<McpServer> {
 
   server.tool(
     'get_doc',
-    'Get full content of a specific Cadence documentation page',
-    { path: z.string().describe('Document path, e.g. /docs/language/resources') },
+    'Get full content of a specific documentation page (Cadence or Flow)',
+    { path: z.string().describe('Document path, e.g. /docs/language/resources or /flow-docs/protocol/staking') },
     async ({ path }) => {
       const doc = await getDoc(path);
       if (!doc) {
