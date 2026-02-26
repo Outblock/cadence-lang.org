@@ -196,9 +196,9 @@ function CommandDisplay({ render, text, typingKey }: {
   const charCount = displayed.length;
 
   return (
-    <div className="flex items-center gap-2 font-mono text-[13px] sm:text-sm min-w-0">
+    <div className="flex items-center gap-2 font-mono text-[13px] sm:text-sm min-w-0 overflow-hidden">
       <span className="text-neutral-400 dark:text-[#555] select-none shrink-0">$</span>
-      <span className="font-medium whitespace-nowrap overflow-x-auto scrollbar-none relative">
+      <span className="font-medium whitespace-nowrap overflow-hidden relative">
         {/* Invisible full text for layout */}
         <span className="invisible" aria-hidden>{render}</span>
         {/* Visible clipped text with syntax highlighting */}
@@ -416,7 +416,7 @@ function Home() {
                 </div>
 
                 {/* Command Box */}
-                <div className="relative w-full max-w-lg mb-2 group">
+                <div className="relative w-full max-w-[calc(100vw-3rem)] sm:max-w-lg mb-2 group">
                   <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)]/30 to-blue-500/30 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
                   <div className="relative flex items-center justify-between bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl p-2 pl-6 shadow-2xl overflow-hidden backdrop-blur-xl transition-colors duration-300">
                     <CommandDisplay
