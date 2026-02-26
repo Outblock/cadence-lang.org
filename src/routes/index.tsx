@@ -274,19 +274,19 @@ const heroCommands: HeroCommand[] = [
   {
     key: "mcp",
     label: "mcp",
-    copyText: (client: string) => `npx install-mcp @outblock/cadence-mcp --client ${client}`,
-    render: (client: string) => (
+    copyText: "claude mcp add cadence -- npx -y mcp-remote https://cadence-mcp.up.railway.app/mcp",
+    render: () => (
       <>
-        <span className={S.cmd}>npx</span>{" "}
-        <span className={S.dim}>install-mcp</span>{" "}
-        <span className={S.pkg}>@outblock/cadence-mcp</span>{" "}
-        <span className={S.flag}>--client</span>{" "}
-        <span className={S.pkg}>{client}</span>
+        <span className={S.cmd}>claude</span>{" "}
+        <span className={S.dim}>mcp add</span>{" "}
+        <span className={S.pkg}>cadence</span>{" "}
+        <span className={S.dim}>--</span>{" "}
+        <span className={S.dim}>npx -y mcp-remote</span>{" "}
+        <span className={S.url}>https://cadence-mcp.up.railway.app/mcp</span>
       </>
     ),
-    hint: "Install the Cadence MCP server",
+    hint: "Add the Cadence MCP server to Claude Code",
     href: "/docs/ai-tools/mcp-server",
-    hasClientSelect: true,
   },
   {
     key: "llms.txt",
