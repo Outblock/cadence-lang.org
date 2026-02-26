@@ -1,6 +1,6 @@
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { writeFile, unlink, mkdtemp } from 'node:fs/promises';
+import { writeFile, unlink, mkdtemp, readFile, copyFile, access, mkdir, cp } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -326,12 +326,13 @@ export const VALID_NETWORKS = ['mainnet', 'testnet', 'emulator'] as const;
 export type FlowNetwork = (typeof VALID_NETWORKS)[number];
 
 /**
- * Manages multiple LSP clients, one per network.
- * Lazily initializes clients on first use.
+ * Manages LSP client + a persistent deps workspace for checking code
+ * with mainnet/testnet address imports.
  */
 export class LSPManager {
   private clients = new Map<string, CadenceLSPClient>();
   private flowCommand: string;
+  private depsWorkspaces = new Map<string, DepsWorkspace>();
 
   constructor(flowCommand = 'flow') {
     this.flowCommand = flowCommand;
@@ -347,37 +348,25 @@ export class LSPManager {
     return client;
   }
 
-  /**
-   * Check code via `flow scripts execute` on-chain.
-   * Works for scripts with address imports that the LSP can't resolve.
-   */
-  async checkCodeViaCLI(code: string, network: FlowNetwork = 'mainnet'): Promise<Diagnostic[]> {
-    const configPath = process.env.FLOW_CONFIG_PATH || join(import.meta.dirname, '..', '..', 'flow.json');
-    const tmpDir = await mkdtemp(join(tmpdir(), 'cadence-mcp-'));
-    const tmpFile = join(tmpDir, 'check.cdc');
-    await writeFile(tmpFile, code, 'utf-8');
-
-    try {
-      const result = await new Promise<{ stdout: string; stderr: string; code: number }>((resolve) => {
-        execFile(
-          this.flowCommand,
-          ['scripts', 'execute', tmpFile, '--network', network, '-f', configPath, '--output', 'json'],
-          { timeout: 30000 },
-          (error, stdout, stderr) => {
-            resolve({ stdout: stdout ?? '', stderr: stderr ?? '', code: error?.code ?? 0 });
-          },
-        );
-      });
-
-      if (result.code === 0) {
-        return []; // No errors
-      }
-
-      // Parse errors from stderr
-      return parseCLIErrors(result.stderr);
-    } finally {
-      await unlink(tmpFile).catch(() => {});
+  private async getDepsWorkspace(network: FlowNetwork): Promise<DepsWorkspace> {
+    let ws = this.depsWorkspaces.get(network);
+    if (!ws) {
+      ws = new DepsWorkspace(this.flowCommand, network);
+      await ws.init();
+      this.depsWorkspaces.set(network, ws);
     }
+    return ws;
+  }
+
+  /**
+   * Check code with address imports by:
+   * 1. Installing missing deps from the network (cached)
+   * 2. Rewriting address imports to string imports
+   * 3. Running `flow cadence lint`
+   */
+  async checkCodeWithDeps(code: string, network: FlowNetwork = 'mainnet'): Promise<Diagnostic[]> {
+    const ws = await this.getDepsWorkspace(network);
+    return ws.lintCode(code);
   }
 
   async shutdown(): Promise<void> {
@@ -393,57 +382,142 @@ export function hasAddressImports(code: string): boolean {
   return /import\s+\w+\s+from\s+0x[0-9a-fA-F]+/m.test(code);
 }
 
-/** Parse Flow CLI error output into Diagnostic objects */
-function parseCLIErrors(stderr: string): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
+/** Extract address imports: [{name: "FungibleToken", address: "f233dcee88fe0abe"}, ...] */
+export function extractAddressImports(code: string): { name: string; address: string }[] {
+  const imports: { name: string; address: string }[] = [];
+  const re = /import\s+(\w+)\s+from\s+0x([0-9a-fA-F]+)/g;
+  let m;
+  while ((m = re.exec(code)) !== null) {
+    imports.push({ name: m[1], address: m[2] });
+  }
+  return imports;
+}
 
-  // Match patterns like:
-  // error: message \n --> hash:line:col
-  // or: /path/file.cdc:line:col: semantic-error: message
-  const errorPattern = /error:\s*(.+?)(?:\s*-->\s*\S+:(\d+):(\d+))?(?:\n|$)/g;
-  const lintPattern = /:\s*(\d+):(\d+):\s*(semantic-error|error|warning|info):\s*(.+)/g;
+/** Rewrite address imports to string imports: `import X from 0xAddr` → `import "X"` */
+export function rewriteToStringImports(code: string): string {
+  return code.replace(
+    /import\s+(\w+)\s+from\s+0x[0-9a-fA-F]+/g,
+    'import "$1"',
+  );
+}
+
+/**
+ * Persistent workspace that caches installed dependencies per network.
+ * Uses `flow dependencies install` to fetch contracts from mainnet/testnet.
+ */
+class DepsWorkspace {
+  private dir: string;
+  private flowCommand: string;
+  private network: FlowNetwork;
+  private installedContracts = new Set<string>();
+
+  constructor(flowCommand: string, network: FlowNetwork) {
+    this.flowCommand = flowCommand;
+    this.network = network;
+    this.dir = join(tmpdir(), `cadence-mcp-deps-${network}`);
+  }
+
+  async init(): Promise<void> {
+    await mkdir(this.dir, { recursive: true });
+    const flowJsonPath = join(this.dir, 'flow.json');
+    try {
+      await access(flowJsonPath);
+      // flow.json exists, load installed contracts from it
+      const raw = await readFile(flowJsonPath, 'utf-8');
+      const config = JSON.parse(raw);
+      if (config.dependencies) {
+        for (const name of Object.keys(config.dependencies)) {
+          this.installedContracts.add(name);
+        }
+      }
+    } catch {
+      // Create fresh flow.json with network config
+      await writeFile(flowJsonPath, JSON.stringify({
+        networks: {
+          mainnet: 'access.mainnet.nodes.onflow.org:9000',
+          testnet: 'access.devnet.nodes.onflow.org:9000',
+          emulator: '127.0.0.1:3569',
+        },
+      }, null, 2), 'utf-8');
+    }
+  }
+
+  /** Install dependencies for contracts not yet cached */
+  async installDeps(imports: { name: string; address: string }[]): Promise<void> {
+    const missing = imports.filter((i) => !this.installedContracts.has(i.name));
+    if (missing.length === 0) return;
+
+    for (const dep of missing) {
+      await new Promise<void>((resolve) => {
+        execFile(
+          this.flowCommand,
+          ['dependencies', 'install', dep.name, '--network', this.network],
+          { cwd: this.dir, timeout: 60000 },
+          (error, _stdout, stderr) => {
+            if (!error) {
+              this.installedContracts.add(dep.name);
+            } else {
+              console.error(`[deps] Failed to install ${dep.name}: ${stderr}`);
+            }
+            resolve(); // Don't fail the whole check if one dep fails
+          },
+        );
+      });
+    }
+  }
+
+  /** Lint code: install deps, rewrite imports, run flow cadence lint */
+  async lintCode(code: string): Promise<Diagnostic[]> {
+    const imports = extractAddressImports(code);
+    if (imports.length > 0) {
+      await this.installDeps(imports);
+    }
+
+    const rewritten = rewriteToStringImports(code);
+    const tmpFile = join(this.dir, `check_${Date.now()}.cdc`);
+    await writeFile(tmpFile, rewritten, 'utf-8');
+
+    try {
+      const result = await new Promise<{ output: string; code: number }>((resolve) => {
+        execFile(
+          this.flowCommand,
+          ['cadence', 'lint', tmpFile, '--network', this.network],
+          { cwd: this.dir, timeout: 30000 },
+          (error, stdout, stderr) => {
+            // lint outputs to stdout in bun, stderr in node — capture both
+            resolve({ output: (stdout ?? '') + (stderr ?? ''), code: error?.code ?? 0 });
+          },
+        );
+      });
+
+      if (result.code === 0) return [];
+      return parseLintOutput(result.output);
+    } finally {
+      await unlink(tmpFile).catch(() => {});
+    }
+  }
+}
+
+/** Parse `flow cadence lint` output into Diagnostic objects */
+export function parseLintOutput(output: string): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  // Strip ANSI escape codes first for clean matching
+  const clean = output.replace(/\x1b\[[0-9;]*m/g, '');
+  // Pattern: file.cdc:line:col: severity: message
+  const re = /:(\d+):(\d+):\s*(semantic-error|error|warning|if-let-hint|info|hint):\s*(.+?)\s*$/gm;
 
   let match;
-  while ((match = lintPattern.exec(stderr)) !== null) {
+  while ((match = re.exec(clean)) !== null) {
     const line = parseInt(match[1], 10) - 1;
     const char = parseInt(match[2], 10) - 1;
-    const severity = match[3] === 'warning' ? 2 : 1;
+    const kind = match[3];
+    const severity = kind === 'warning' || kind === 'if-let-hint' || kind === 'hint' ? 2 : 1;
     diagnostics.push({
       range: { start: { line, character: char }, end: { line, character: char } },
       severity,
       message: match[4].trim(),
     });
   }
-
-  if (diagnostics.length > 0) return diagnostics;
-
-  // Fallback: parse runtime error format
-  while ((match = errorPattern.exec(stderr)) !== null) {
-    const message = match[1].trim();
-    const line = match[2] ? parseInt(match[2], 10) - 1 : 0;
-    const char = match[3] ? parseInt(match[3], 10) - 1 : 0;
-    if (message && !message.startsWith('See documentation') && !message.startsWith('Was this error')) {
-      diagnostics.push({
-        range: { start: { line, character: char }, end: { line, character: char } },
-        severity: 1,
-        message,
-      });
-    }
-  }
-
-  // If we still couldn't parse, return the raw stderr as a single diagnostic
-  if (diagnostics.length === 0 && stderr.trim()) {
-    // Extract the most useful part
-    const cleaned = stderr.replace(/❌.*?\n/g, '').replace(/🙏.*?\n/g, '').replace(/❗.*?\n/g, '').trim();
-    if (cleaned) {
-      diagnostics.push({
-        range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
-        severity: 1,
-        message: cleaned.split('\n')[0],
-      });
-    }
-  }
-
   return diagnostics;
 }
 

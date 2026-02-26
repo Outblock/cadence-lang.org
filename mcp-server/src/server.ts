@@ -142,8 +142,8 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
       async ({ code, filename, network }) => {
         let diagnostics;
         if (hasAddressImports(code) && network !== 'emulator') {
-          // Use CLI execution for code with address imports (LSP can't resolve mainnet/testnet imports)
-          diagnostics = await lspManager.checkCodeViaCLI(code, network);
+          // Install deps from network, rewrite to string imports, lint locally
+          diagnostics = await lspManager.checkCodeWithDeps(code, network);
         } else {
           const lsp = await lspManager.getClient(network);
           diagnostics = await lsp.checkCode(code, filename);
