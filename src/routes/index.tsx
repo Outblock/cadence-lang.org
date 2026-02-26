@@ -279,7 +279,7 @@ const heroCommands: HeroCommand[] = [
     label: "mcp",
     copyText: (client: string, mode: McpMode) =>
       mode === "remote"
-        ? `npx install-mcp https://cadence-mcp.up.railway.app/mcp --client ${client}`
+        ? `npx install-mcp https://cadence-mcp.up.railway.app/mcp --client ${client} --oauth no`
         : `npx install-mcp @outblock/cadence-mcp --client ${client}`,
     render: (_client: string, mode: McpMode) =>
       mode === "remote" ? (
