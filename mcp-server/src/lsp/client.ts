@@ -1,5 +1,8 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import { writeFile, unlink, mkdtemp } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 interface PendingRequest {
   resolve: (value: any) => void;
@@ -59,7 +62,7 @@ export class CadenceLSPClient extends EventEmitter {
 
   private async _initialize(): Promise<void> {
     try {
-      this.process = spawn(this.flowCommand, ['cadence', 'language-server', '--network', this.network], {
+      this.process = spawn(this.flowCommand, ['cadence', 'language-server', '--enable-flow-client=false'], {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
     } catch (e: any) {
@@ -103,8 +106,6 @@ export class CadenceLSPClient extends EventEmitter {
       workspaceFolders: null,
       initializationOptions: {
         accessCheckMode: 'strict',
-        configPath: process.env.FLOW_CONFIG_PATH || './flow.json',
-        numberOfAccounts: '4',
       },
     });
 
@@ -346,12 +347,104 @@ export class LSPManager {
     return client;
   }
 
+  /**
+   * Check code via `flow scripts execute` on-chain.
+   * Works for scripts with address imports that the LSP can't resolve.
+   */
+  async checkCodeViaCLI(code: string, network: FlowNetwork = 'mainnet'): Promise<Diagnostic[]> {
+    const configPath = process.env.FLOW_CONFIG_PATH || join(import.meta.dirname, '..', '..', 'flow.json');
+    const tmpDir = await mkdtemp(join(tmpdir(), 'cadence-mcp-'));
+    const tmpFile = join(tmpDir, 'check.cdc');
+    await writeFile(tmpFile, code, 'utf-8');
+
+    try {
+      const result = await new Promise<{ stdout: string; stderr: string; code: number }>((resolve) => {
+        execFile(
+          this.flowCommand,
+          ['scripts', 'execute', tmpFile, '--network', network, '-f', configPath, '--output', 'json'],
+          { timeout: 30000 },
+          (error, stdout, stderr) => {
+            resolve({ stdout: stdout ?? '', stderr: stderr ?? '', code: error?.code ?? 0 });
+          },
+        );
+      });
+
+      if (result.code === 0) {
+        return []; // No errors
+      }
+
+      // Parse errors from stderr
+      return parseCLIErrors(result.stderr);
+    } finally {
+      await unlink(tmpFile).catch(() => {});
+    }
+  }
+
   async shutdown(): Promise<void> {
     for (const client of this.clients.values()) {
       await client.shutdown();
     }
     this.clients.clear();
   }
+}
+
+/** Detect if code has address imports like `import X from 0xabc123` */
+export function hasAddressImports(code: string): boolean {
+  return /import\s+\w+\s+from\s+0x[0-9a-fA-F]+/m.test(code);
+}
+
+/** Parse Flow CLI error output into Diagnostic objects */
+function parseCLIErrors(stderr: string): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+
+  // Match patterns like:
+  // error: message \n --> hash:line:col
+  // or: /path/file.cdc:line:col: semantic-error: message
+  const errorPattern = /error:\s*(.+?)(?:\s*-->\s*\S+:(\d+):(\d+))?(?:\n|$)/g;
+  const lintPattern = /:\s*(\d+):(\d+):\s*(semantic-error|error|warning|info):\s*(.+)/g;
+
+  let match;
+  while ((match = lintPattern.exec(stderr)) !== null) {
+    const line = parseInt(match[1], 10) - 1;
+    const char = parseInt(match[2], 10) - 1;
+    const severity = match[3] === 'warning' ? 2 : 1;
+    diagnostics.push({
+      range: { start: { line, character: char }, end: { line, character: char } },
+      severity,
+      message: match[4].trim(),
+    });
+  }
+
+  if (diagnostics.length > 0) return diagnostics;
+
+  // Fallback: parse runtime error format
+  while ((match = errorPattern.exec(stderr)) !== null) {
+    const message = match[1].trim();
+    const line = match[2] ? parseInt(match[2], 10) - 1 : 0;
+    const char = match[3] ? parseInt(match[3], 10) - 1 : 0;
+    if (message && !message.startsWith('See documentation') && !message.startsWith('Was this error')) {
+      diagnostics.push({
+        range: { start: { line, character: char }, end: { line, character: char } },
+        severity: 1,
+        message,
+      });
+    }
+  }
+
+  // If we still couldn't parse, return the raw stderr as a single diagnostic
+  if (diagnostics.length === 0 && stderr.trim()) {
+    // Extract the most useful part
+    const cleaned = stderr.replace(/❌.*?\n/g, '').replace(/🙏.*?\n/g, '').replace(/❗.*?\n/g, '').trim();
+    if (cleaned) {
+      diagnostics.push({
+        range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
+        severity: 1,
+        message: cleaned.split('\n')[0],
+      });
+    }
+  }
+
+  return diagnostics;
 }
 
 const SYMBOL_KINDS: Record<number, string> = {

@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { searchDocs, getDoc, docsAvailable, browseDoc } from './search.js';
-import { CadenceLSPClient, LSPManager, VALID_NETWORKS, type FlowNetwork } from './lsp/client.js';
+import { CadenceLSPClient, LSPManager, VALID_NETWORKS, hasAddressImports, type FlowNetwork } from './lsp/client.js';
 
 const networkSchema = z
   .enum(VALID_NETWORKS)
@@ -140,8 +140,14 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
         network: networkSchema,
       },
       async ({ code, filename, network }) => {
-        const lsp = await lspManager.getClient(network);
-        const diagnostics = await lsp.checkCode(code, filename);
+        let diagnostics;
+        if (hasAddressImports(code) && network !== 'emulator') {
+          // Use CLI execution for code with address imports (LSP can't resolve mainnet/testnet imports)
+          diagnostics = await lspManager.checkCodeViaCLI(code, network);
+        } else {
+          const lsp = await lspManager.getClient(network);
+          diagnostics = await lsp.checkCode(code, filename);
+        }
         return {
           content: [
             {
