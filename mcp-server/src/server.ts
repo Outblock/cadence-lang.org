@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { searchDocs, getDoc, docsAvailable, browseDoc } from './search.js';
-import { CadenceLSPClient, LSPManager, VALID_NETWORKS, hasAddressImports, type FlowNetwork } from './lsp/client.js';
+import { CadenceLSPClient, LSPManager, VALID_NETWORKS, type FlowNetwork } from './lsp/client.js';
 
 const networkSchema = z
   .enum(VALID_NETWORKS)
@@ -140,14 +140,7 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
         network: networkSchema,
       },
       async ({ code, filename, network }) => {
-        let diagnostics;
-        if (hasAddressImports(code) && network !== 'emulator') {
-          // Install deps from network, rewrite to string imports, lint locally
-          diagnostics = await lspManager.checkCodeWithDeps(code, network);
-        } else {
-          const lsp = await lspManager.getClient(network);
-          diagnostics = await lsp.checkCode(code, filename);
-        }
+        const diagnostics = await lspManager.checkCode(code, network, filename);
         return {
           content: [
             {
@@ -170,19 +163,12 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
         network: networkSchema,
       },
       async ({ code, line, character, filename, network }) => {
-        const lsp = await lspManager.getClient(network);
-        const uri = `file:///tmp/cadence-mcp/${filename ?? 'hover.cdc'}`;
-        await lsp.openDocument(uri, code);
-        try {
-          const result = await lsp.hover(uri, line, character);
-          return {
-            content: [
-              { type: 'text' as const, text: CadenceLSPClient.formatHover(result) },
-            ],
-          };
-        } finally {
-          await lsp.closeDocument(uri);
-        }
+        const result = await lspManager.hover(code, network, line, character, filename);
+        return {
+          content: [
+            { type: 'text' as const, text: CadenceLSPClient.formatHover(result) },
+          ],
+        };
       },
     );
 
@@ -197,31 +183,24 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
         network: networkSchema,
       },
       async ({ code, line, character, filename, network }) => {
-        const lsp = await lspManager.getClient(network);
-        const uri = `file:///tmp/cadence-mcp/${filename ?? 'def.cdc'}`;
-        await lsp.openDocument(uri, code);
-        try {
-          const result = await lsp.definition(uri, line, character);
-          if (!result) {
-            return {
-              content: [
-                { type: 'text' as const, text: 'No definition found.' },
-              ],
-            };
-          }
-          const loc = Array.isArray(result) ? result[0] : result;
-          const pos = loc.range?.start;
+        const result = await lspManager.definition(code, network, line, character, filename);
+        if (!result) {
           return {
             content: [
-              {
-                type: 'text' as const,
-                text: `Definition: ${loc.uri} at line ${(pos?.line ?? 0) + 1}:${(pos?.character ?? 0) + 1}`,
-              },
+              { type: 'text' as const, text: 'No definition found.' },
             ],
           };
-        } finally {
-          await lsp.closeDocument(uri);
         }
+        const loc = Array.isArray(result) ? result[0] : result;
+        const pos = loc.range?.start;
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: `Definition: ${loc.uri} at line ${(pos?.line ?? 0) + 1}:${(pos?.character ?? 0) + 1}`,
+            },
+          ],
+        };
       },
     );
 
@@ -234,22 +213,15 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
         network: networkSchema,
       },
       async ({ code, filename, network }) => {
-        const lsp = await lspManager.getClient(network);
-        const uri = `file:///tmp/cadence-mcp/${filename ?? 'symbols.cdc'}`;
-        await lsp.openDocument(uri, code);
-        try {
-          const symbols = await lsp.documentSymbols(uri);
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: CadenceLSPClient.formatSymbols(symbols || []),
-              },
-            ],
-          };
-        } finally {
-          await lsp.closeDocument(uri);
-        }
+        const symbols = await lspManager.symbols(code, network, filename);
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: CadenceLSPClient.formatSymbols(symbols || []),
+            },
+          ],
+        };
       },
     );
   }

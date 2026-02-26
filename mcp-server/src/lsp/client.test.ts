@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, mock, jest } from 'bun:test';
-import { CadenceLSPClient, type Diagnostic, hasAddressImports, extractAddressImports, rewriteToStringImports, parseLintOutput } from './client.js';
+import { describe, it, expect } from 'bun:test';
+import { CadenceLSPClient, type Diagnostic, hasAddressImports, extractAddressImports, rewriteToStringImports } from './client.js';
 
 // ─── Static formatters (pure, no LSP process needed) ───
 
@@ -146,47 +146,6 @@ describe('CadenceLSPClient.formatSymbols', () => {
     const symbols = [{ name: 'unknown', kind: 999 }];
     const result = CadenceLSPClient.formatSymbols(symbols);
     expect(result).toContain('kind(999) unknown');
-  });
-});
-
-// ─── parseLintOutput ───
-
-describe('parseLintOutput', () => {
-  it('parses clean lint output without ANSI codes', () => {
-    const output = '/tmp/check.cdc:4:11: semantic-error: mismatched types. expected `String`, got `Int`\n';
-    const diags = parseLintOutput(output);
-    expect(diags).toHaveLength(1);
-    expect(diags[0].range.start.line).toBe(3); // 0-based
-    expect(diags[0].range.start.character).toBe(10);
-    expect(diags[0].severity).toBe(1);
-    expect(diags[0].message).toBe('mismatched types. expected `String`, got `Int`');
-  });
-
-  it('parses ANSI-escaped lint output', () => {
-    const output = '\n\x1b[38;5;244m/var/tmp/check.cdc:4:11:\x1b[0m \x1b[31msemantic-error:\x1b[0m mismatched types. expected `String`, got `Int`\n\n\x1b[31m1 problem (1 error, 0 warnings)\x1b[0m\n\n';
-    const diags = parseLintOutput(output);
-    expect(diags).toHaveLength(1);
-    expect(diags[0].range.start.line).toBe(3);
-    expect(diags[0].severity).toBe(1);
-    expect(diags[0].message).toContain('mismatched types');
-  });
-
-  it('parses warnings', () => {
-    const output = '/tmp/check.cdc:2:5: warning: unused variable\n';
-    const diags = parseLintOutput(output);
-    expect(diags).toHaveLength(1);
-    expect(diags[0].severity).toBe(2);
-  });
-
-  it('returns empty array for clean output', () => {
-    const output = '\n0 problems (0 errors, 0 warnings)\n';
-    expect(parseLintOutput(output)).toEqual([]);
-  });
-
-  it('handles multiple errors', () => {
-    const output = '/tmp/a.cdc:1:5: error: first\n/tmp/a.cdc:3:10: semantic-error: second\n';
-    const diags = parseLintOutput(output);
-    expect(diags).toHaveLength(2);
   });
 });
 

@@ -1,6 +1,6 @@
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { writeFile, unlink, mkdtemp, readFile, copyFile, access, mkdir, cp } from 'node:fs/promises';
+import { writeFile, readFile, access, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -30,6 +30,7 @@ const SEVERITY_LABELS: Record<number, string> = {
 export interface LSPClientOptions {
   flowCommand?: string;
   network?: string;
+  cwd?: string;
 }
 
 export class CadenceLSPClient extends EventEmitter {
@@ -41,6 +42,7 @@ export class CadenceLSPClient extends EventEmitter {
   private initPromise: Promise<void> | null = null;
   private flowCommand: string;
   private network: string;
+  private cwd?: string;
 
   constructor(flowCommandOrOpts: string | LSPClientOptions = 'flow') {
     super();
@@ -50,6 +52,7 @@ export class CadenceLSPClient extends EventEmitter {
     } else {
       this.flowCommand = flowCommandOrOpts.flowCommand ?? 'flow';
       this.network = flowCommandOrOpts.network ?? 'mainnet';
+      this.cwd = flowCommandOrOpts.cwd;
     }
   }
 
@@ -64,6 +67,7 @@ export class CadenceLSPClient extends EventEmitter {
     try {
       this.process = spawn(this.flowCommand, ['cadence', 'language-server', '--enable-flow-client=false'], {
         stdio: ['pipe', 'pipe', 'pipe'],
+        ...(this.cwd ? { cwd: this.cwd } : {}),
       });
     } catch (e: any) {
       throw new Error(`Failed to start Flow CLI: ${e.message}`);
@@ -102,7 +106,7 @@ export class CadenceLSPClient extends EventEmitter {
           publishDiagnostics: {},
         },
       },
-      rootUri: null,
+      rootUri: this.cwd ? `file://${this.cwd}` : null,
       workspaceFolders: null,
       initializationOptions: {
         accessCheckMode: 'strict',
@@ -253,7 +257,8 @@ export class CadenceLSPClient extends EventEmitter {
    */
   async checkCode(code: string, filename = 'check.cdc'): Promise<Diagnostic[]> {
     await this.ensureInitialized();
-    const uri = `file:///tmp/cadence-mcp/${filename}`;
+    const base = this.cwd ? `file://${this.cwd}` : 'file:///tmp/cadence-mcp';
+    const uri = `${base}/${filename}`;
 
     return new Promise<Diagnostic[]>((resolve) => {
       const timeout = setTimeout(() => {
@@ -342,7 +347,9 @@ export class LSPManager {
     let client = this.clients.get(network);
     if (client) return client;
 
-    client = new CadenceLSPClient({ flowCommand: this.flowCommand, network });
+    // Start LSP client inside the DepsWorkspace so it finds flow.json
+    const ws = await this.getDepsWorkspace(network);
+    client = new CadenceLSPClient({ flowCommand: this.flowCommand, network, cwd: ws.getDir() });
     await client.ensureInitialized();
     this.clients.set(network, client);
     return client;
@@ -359,14 +366,67 @@ export class LSPManager {
   }
 
   /**
-   * Check code with address imports by:
-   * 1. Installing missing deps from the network (cached)
-   * 2. Rewriting address imports to string imports
-   * 3. Running `flow cadence lint`
+   * Prepare code with address imports: install deps, rewrite to string imports.
+   * Returns the (possibly rewritten) code and the workspace-relative URI.
    */
-  async checkCodeWithDeps(code: string, network: FlowNetwork = 'mainnet'): Promise<Diagnostic[]> {
+  private async prepareCode(
+    code: string,
+    network: FlowNetwork,
+    filename: string,
+  ): Promise<{ code: string; uri: string }> {
     const ws = await this.getDepsWorkspace(network);
-    return ws.lintCode(code);
+
+    if (hasAddressImports(code) && network !== 'emulator') {
+      const imports = extractAddressImports(code);
+      await ws.installDeps(imports);
+      code = rewriteToStringImports(code);
+    }
+
+    const uri = `file://${ws.getDir()}/${filename}`;
+    return { code, uri };
+  }
+
+  /** Check code for diagnostics, transparently handling address imports */
+  async checkCode(code: string, network: FlowNetwork = 'mainnet', filename = 'check.cdc'): Promise<Diagnostic[]> {
+    const prepared = await this.prepareCode(code, network, filename);
+    const client = await this.getClient(network);
+    return client.checkCode(prepared.code, filename);
+  }
+
+  /** Get hover info, transparently handling address imports */
+  async hover(code: string, network: FlowNetwork, line: number, character: number, filename = 'hover.cdc'): Promise<any> {
+    const prepared = await this.prepareCode(code, network, filename);
+    const client = await this.getClient(network);
+    await client.openDocument(prepared.uri, prepared.code);
+    try {
+      return await client.hover(prepared.uri, line, character);
+    } finally {
+      await client.closeDocument(prepared.uri);
+    }
+  }
+
+  /** Get definition location, transparently handling address imports */
+  async definition(code: string, network: FlowNetwork, line: number, character: number, filename = 'def.cdc'): Promise<any> {
+    const prepared = await this.prepareCode(code, network, filename);
+    const client = await this.getClient(network);
+    await client.openDocument(prepared.uri, prepared.code);
+    try {
+      return await client.definition(prepared.uri, line, character);
+    } finally {
+      await client.closeDocument(prepared.uri);
+    }
+  }
+
+  /** Get document symbols, transparently handling address imports */
+  async symbols(code: string, network: FlowNetwork, filename = 'symbols.cdc'): Promise<any> {
+    const prepared = await this.prepareCode(code, network, filename);
+    const client = await this.getClient(network);
+    await client.openDocument(prepared.uri, prepared.code);
+    try {
+      return await client.documentSymbols(prepared.uri);
+    } finally {
+      await client.closeDocument(prepared.uri);
+    }
   }
 
   async shutdown(): Promise<void> {
@@ -415,6 +475,10 @@ class DepsWorkspace {
     this.flowCommand = flowCommand;
     this.network = network;
     this.dir = join(tmpdir(), `cadence-mcp-deps-${network}`);
+  }
+
+  getDir(): string {
+    return this.dir;
   }
 
   async init(): Promise<void> {
@@ -466,60 +530,8 @@ class DepsWorkspace {
     }
   }
 
-  /** Lint code: install deps, rewrite imports, run flow cadence lint */
-  async lintCode(code: string): Promise<Diagnostic[]> {
-    const imports = extractAddressImports(code);
-    if (imports.length > 0) {
-      await this.installDeps(imports);
-    }
-
-    const rewritten = rewriteToStringImports(code);
-    const tmpFile = join(this.dir, `check_${Date.now()}.cdc`);
-    await writeFile(tmpFile, rewritten, 'utf-8');
-
-    try {
-      const result = await new Promise<{ output: string; code: number }>((resolve) => {
-        execFile(
-          this.flowCommand,
-          ['cadence', 'lint', tmpFile, '--network', this.network],
-          { cwd: this.dir, timeout: 30000 },
-          (error, stdout, stderr) => {
-            // lint outputs to stdout in bun, stderr in node — capture both
-            resolve({ output: (stdout ?? '') + (stderr ?? ''), code: error?.code ?? 0 });
-          },
-        );
-      });
-
-      if (result.code === 0) return [];
-      return parseLintOutput(result.output);
-    } finally {
-      await unlink(tmpFile).catch(() => {});
-    }
-  }
 }
 
-/** Parse `flow cadence lint` output into Diagnostic objects */
-export function parseLintOutput(output: string): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
-  // Strip ANSI escape codes first for clean matching
-  const clean = output.replace(/\x1b\[[0-9;]*m/g, '');
-  // Pattern: file.cdc:line:col: severity: message
-  const re = /:(\d+):(\d+):\s*(semantic-error|error|warning|if-let-hint|info|hint):\s*(.+?)\s*$/gm;
-
-  let match;
-  while ((match = re.exec(clean)) !== null) {
-    const line = parseInt(match[1], 10) - 1;
-    const char = parseInt(match[2], 10) - 1;
-    const kind = match[3];
-    const severity = kind === 'warning' || kind === 'if-let-hint' || kind === 'hint' ? 2 : 1;
-    diagnostics.push({
-      range: { start: { line, character: char }, end: { line, character: char } },
-      severity,
-      message: match[4].trim(),
-    });
-  }
-  return diagnostics;
-}
 
 const SYMBOL_KINDS: Record<number, string> = {
   1: 'File',
