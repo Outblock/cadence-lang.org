@@ -24,6 +24,14 @@ COPY mcp-server/src/ ./mcp-server/src/
 COPY mcp-server/flow.json ./mcp-server/flow.json
 COPY content/ ./content/
 
+# Clone Flow ecosystem docs for MCP search
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && git clone --depth 1 https://github.com/onflow/docs.git /app/external/onflow-docs \
+    && apt-get remove -y git \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/* /app/external/onflow-docs/.git
+
 WORKDIR /app/mcp-server
 
 ENV PORT=3001
