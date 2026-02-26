@@ -286,7 +286,7 @@ const heroCommands: HeroCommand[] = [
         <>
           <span className={S.cmd}>npx</span>{" "}
           <span className={S.dim}>install-mcp</span>{" "}
-          <span className={S.url}>https://cadence-mcp.up.railway.app/mcp</span>{" "}
+          <span className={S.url}>cadence-mcp…/mcp</span>{" "}
           <span className={S.flag}>--client</span>{" "}
           <span className={S.pkg}>{_client}</span>
         </>
