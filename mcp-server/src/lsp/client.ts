@@ -24,6 +24,11 @@ const SEVERITY_LABELS: Record<number, string> = {
   4: 'hint',
 };
 
+export interface LSPClientOptions {
+  flowCommand?: string;
+  network?: string;
+}
+
 export class CadenceLSPClient extends EventEmitter {
   private process: ChildProcess | null = null;
   private pendingRequests = new Map<number, PendingRequest>();
@@ -32,10 +37,17 @@ export class CadenceLSPClient extends EventEmitter {
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private flowCommand: string;
+  private network: string;
 
-  constructor(flowCommand = 'flow') {
+  constructor(flowCommandOrOpts: string | LSPClientOptions = 'flow') {
     super();
-    this.flowCommand = flowCommand;
+    if (typeof flowCommandOrOpts === 'string') {
+      this.flowCommand = flowCommandOrOpts;
+      this.network = 'mainnet';
+    } else {
+      this.flowCommand = flowCommandOrOpts.flowCommand ?? 'flow';
+      this.network = flowCommandOrOpts.network ?? 'mainnet';
+    }
   }
 
   async ensureInitialized(): Promise<void> {
@@ -47,7 +59,7 @@ export class CadenceLSPClient extends EventEmitter {
 
   private async _initialize(): Promise<void> {
     try {
-      this.process = spawn(this.flowCommand, ['cadence', 'language-server'], {
+      this.process = spawn(this.flowCommand, ['cadence', 'language-server', '--network', this.network], {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
     } catch (e: any) {
@@ -306,6 +318,39 @@ export class CadenceLSPClient extends EventEmitter {
       }
     }
     return lines.join('\n');
+  }
+}
+
+export const VALID_NETWORKS = ['mainnet', 'testnet', 'emulator'] as const;
+export type FlowNetwork = (typeof VALID_NETWORKS)[number];
+
+/**
+ * Manages multiple LSP clients, one per network.
+ * Lazily initializes clients on first use.
+ */
+export class LSPManager {
+  private clients = new Map<string, CadenceLSPClient>();
+  private flowCommand: string;
+
+  constructor(flowCommand = 'flow') {
+    this.flowCommand = flowCommand;
+  }
+
+  async getClient(network: FlowNetwork = 'mainnet'): Promise<CadenceLSPClient> {
+    let client = this.clients.get(network);
+    if (client) return client;
+
+    client = new CadenceLSPClient({ flowCommand: this.flowCommand, network });
+    await client.ensureInitialized();
+    this.clients.set(network, client);
+    return client;
+  }
+
+  async shutdown(): Promise<void> {
+    for (const client of this.clients.values()) {
+      await client.shutdown();
+    }
+    this.clients.clear();
   }
 }
 

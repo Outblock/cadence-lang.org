@@ -1,13 +1,32 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { searchDocs, getDoc, docsAvailable } from './search.js';
-import { CadenceLSPClient } from './lsp/client.js';
+import { searchDocs, getDoc, docsAvailable, browseDoc } from './search.js';
+import { CadenceLSPClient, LSPManager, VALID_NETWORKS, type FlowNetwork } from './lsp/client.js';
 
-export async function createServer(lsp?: CadenceLSPClient): Promise<McpServer> {
+const networkSchema = z
+  .enum(VALID_NETWORKS)
+  .optional()
+  .default('mainnet')
+  .describe('Flow network for resolving imports (default: mainnet)');
+
+export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager): Promise<McpServer> {
   const server = new McpServer({
     name: 'cadence-mcp',
     version: '1.0.0',
   });
+
+  // Normalize: wrap a single CadenceLSPClient into an LSPManager-like interface
+  let lspManager: LSPManager | undefined;
+  if (lspOrManager instanceof LSPManager) {
+    lspManager = lspOrManager;
+  } else if (lspOrManager instanceof CadenceLSPClient) {
+    // Legacy single-client mode: wrap it so getClient() returns it
+    const singleClient = lspOrManager;
+    lspManager = {
+      getClient: async () => singleClient,
+      shutdown: async () => singleClient.shutdown(),
+    } as LSPManager;
+  }
 
   // --- Documentation tools (stateless, only if docs dir exists) ---
 
@@ -65,11 +84,50 @@ export async function createServer(lsp?: CadenceLSPClient): Promise<McpServer> {
       };
     },
   );
+  server.tool(
+    'browse_docs',
+    'Browse the documentation tree structure. Call with no path to see top-level categories, then drill down into sections.',
+    {
+      path: z.string().optional().describe('Path to browse, e.g. /docs/language. Omit for root.'),
+    },
+    async ({ path }) => {
+      const node = await browseDoc(path);
+      if (!node) {
+        return {
+          content: [{ type: 'text' as const, text: `No documentation node found at: ${path ?? '/'}` }],
+        };
+      }
+
+      const lines: string[] = [`# ${node.title}`, `Path: ${node.path}`];
+      if (node.description) lines.push(node.description);
+
+      if (node.children?.length) {
+        lines.push('', '## Children');
+        for (const child of node.children) {
+          const desc = child.description ? ` — ${child.description}` : '';
+          lines.push(`- **${child.title}** (\`${child.path}\`)${desc}`);
+        }
+      }
+
+      if (node.sections?.length) {
+        lines.push('', '## Sections');
+        for (const s of node.sections) {
+          const indent = s.level === 3 ? '  ' : '';
+          lines.push(`${indent}- ${s.heading}`);
+        }
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: lines.join('\n') }],
+      };
+    },
+  );
+
   } // end hasDocs
 
   // --- LSP tools (require Flow CLI) ---
 
-  if (lsp) {
+  if (lspManager) {
     server.tool(
       'cadence_check',
       'Check Cadence smart contract code for syntax and type errors. Returns diagnostics.',
@@ -79,8 +137,10 @@ export async function createServer(lsp?: CadenceLSPClient): Promise<McpServer> {
           .string()
           .optional()
           .describe('Virtual filename (default: check.cdc)'),
+        network: networkSchema,
       },
-      async ({ code, filename }) => {
+      async ({ code, filename, network }) => {
+        const lsp = await lspManager.getClient(network);
         const diagnostics = await lsp.checkCode(code, filename);
         return {
           content: [
@@ -101,8 +161,10 @@ export async function createServer(lsp?: CadenceLSPClient): Promise<McpServer> {
         line: z.number().describe('0-based line number'),
         character: z.number().describe('0-based column number'),
         filename: z.string().optional().describe('Virtual filename'),
+        network: networkSchema,
       },
-      async ({ code, line, character, filename }) => {
+      async ({ code, line, character, filename, network }) => {
+        const lsp = await lspManager.getClient(network);
         const uri = `file:///tmp/cadence-mcp/${filename ?? 'hover.cdc'}`;
         await lsp.openDocument(uri, code);
         try {
@@ -126,8 +188,10 @@ export async function createServer(lsp?: CadenceLSPClient): Promise<McpServer> {
         line: z.number().describe('0-based line number'),
         character: z.number().describe('0-based column number'),
         filename: z.string().optional().describe('Virtual filename'),
+        network: networkSchema,
       },
-      async ({ code, line, character, filename }) => {
+      async ({ code, line, character, filename, network }) => {
+        const lsp = await lspManager.getClient(network);
         const uri = `file:///tmp/cadence-mcp/${filename ?? 'def.cdc'}`;
         await lsp.openDocument(uri, code);
         try {
@@ -161,8 +225,10 @@ export async function createServer(lsp?: CadenceLSPClient): Promise<McpServer> {
       {
         code: z.string().describe('Cadence source code'),
         filename: z.string().optional().describe('Virtual filename'),
+        network: networkSchema,
       },
-      async ({ code, filename }) => {
+      async ({ code, filename, network }) => {
+        const lsp = await lspManager.getClient(network);
         const uri = `file:///tmp/cadence-mcp/${filename ?? 'symbols.cdc'}`;
         await lsp.openDocument(uri, code);
         try {
