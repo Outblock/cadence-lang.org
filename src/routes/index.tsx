@@ -246,14 +246,17 @@ const S = {
   dim: "text-neutral-500 dark:text-neutral-500",      // subcommands
 } as const;
 
+type McpMode = "remote" | "local";
+
 type HeroCommand = {
   key: string;
   label: string;
-  copyText: string | ((client: string) => string);
-  render: (client: string) => React.ReactNode;
+  copyText: string | ((client: string, mode: McpMode) => string);
+  render: (client: string, mode: McpMode) => React.ReactNode;
   hint: string;
   href: string;
   hasClientSelect?: boolean;
+  hasModeSelect?: boolean;
 };
 
 const heroCommands: HeroCommand[] = [
@@ -274,19 +277,32 @@ const heroCommands: HeroCommand[] = [
   {
     key: "mcp",
     label: "mcp",
-    copyText: (client: string) => `npx install-mcp https://cadence-mcp.up.railway.app/mcp --client ${client}`,
-    render: (client: string) => (
-      <>
-        <span className={S.cmd}>npx</span>{" "}
-        <span className={S.dim}>install-mcp</span>{" "}
-        <span className={S.url}>https://cadence-mcp.up.railway.app/mcp</span>{" "}
-        <span className={S.flag}>--client</span>{" "}
-        <span className={S.pkg}>{client}</span>
-      </>
-    ),
+    copyText: (client: string, mode: McpMode) =>
+      mode === "remote"
+        ? `npx install-mcp https://cadence-mcp.up.railway.app/mcp --client ${client}`
+        : `npx install-mcp @outblock/cadence-mcp --client ${client}`,
+    render: (_client: string, mode: McpMode) =>
+      mode === "remote" ? (
+        <>
+          <span className={S.cmd}>npx</span>{" "}
+          <span className={S.dim}>install-mcp</span>{" "}
+          <span className={S.url}>https://cadence-mcp.up.railway.app/mcp</span>{" "}
+          <span className={S.flag}>--client</span>{" "}
+          <span className={S.pkg}>{_client}</span>
+        </>
+      ) : (
+        <>
+          <span className={S.cmd}>npx</span>{" "}
+          <span className={S.dim}>install-mcp</span>{" "}
+          <span className={S.pkg}>@outblock/cadence-mcp</span>{" "}
+          <span className={S.flag}>--client</span>{" "}
+          <span className={S.pkg}>{_client}</span>
+        </>
+      ),
     hint: "Install the Cadence MCP server",
     href: "/docs/ai-tools/mcp-server",
     hasClientSelect: true,
+    hasModeSelect: true,
   },
   {
     key: "llms.txt",
@@ -323,6 +339,7 @@ function Home() {
   const [copied, setCopied] = useState(false);
   const [activeCmd, setActiveCmd] = useState(0);
   const [mcpClient, setMcpClient] = useState<string>(mcpClients[0].value);
+  const [mcpMode, setMcpMode] = useState<McpMode>("remote");
   const [typingKey, setTypingKey] = useState(0);
   const [activeCodeTab, setActiveCodeTab] = useState<"nft" | "defi">("nft");
   const codeContainerRef = useRef<HTMLDivElement>(null);
@@ -337,7 +354,7 @@ function Home() {
 
   const current = heroCommands[activeCmd];
   const commandText = typeof current.copyText === "function"
-    ? current.copyText(mcpClient)
+    ? current.copyText(mcpClient, mcpMode)
     : current.copyText;
 
   const copyCommand = () => {
@@ -403,7 +420,7 @@ function Home() {
                   <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)]/30 to-blue-500/30 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
                   <div className="relative flex items-center justify-between bg-white dark:bg-[#111] border border-black/10 dark:border-white/10 rounded-xl p-2 pl-6 shadow-2xl overflow-hidden backdrop-blur-xl transition-colors duration-300">
                     <CommandDisplay
-                      render={current.render(mcpClient)}
+                      render={current.render(mcpClient, mcpMode)}
                       text={commandText}
                       typingKey={typingKey}
                     />
@@ -420,6 +437,22 @@ function Home() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 mb-10">
+                  {current.hasModeSelect && (
+                    <div className="inline-flex text-xs font-mono bg-neutral-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg overflow-hidden">
+                      {(["remote", "local"] as const).map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => { setMcpMode(m); setCopied(false); setTypingKey(k => k + 1); }}
+                          className={`px-2.5 py-1.5 transition-colors ${mcpMode === m
+                            ? "bg-[var(--accent)]/15 text-[var(--accent)]"
+                            : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {current.hasClientSelect && (
                     <div className="relative">
                       <select
