@@ -512,10 +512,12 @@ class DepsWorkspace {
     if (missing.length === 0) return;
 
     for (const dep of missing) {
+      // Use network://0xAddress.ContractName format so the CLI can resolve any contract
+      const depSpec = `${this.network}://0x${dep.address}.${dep.name}`;
       await new Promise<void>((resolve) => {
         execFile(
           this.flowCommand,
-          ['dependencies', 'install', dep.name, '--network', this.network],
+          ['dependencies', 'install', depSpec],
           { cwd: this.dir, timeout: 60000 },
           (error, _stdout, stderr) => {
             if (!error) {
