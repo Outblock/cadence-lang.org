@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { searchDocs, getDoc, docsAvailable, browseDoc } from './search.js';
 import { CadenceLSPClient, LSPManager, VALID_NETWORKS, type FlowNetwork } from './lsp/client.js';
+import { fetchContractSource, securityScan, formatScanResult } from './audit.js';
 
 const networkSchema = z
   .enum(VALID_NETWORKS)
@@ -225,6 +226,79 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
       },
     );
   }
+
+  // --- Audit tools ---
+
+  server.tool(
+    'get_contract_source',
+    'Fetch on-chain Cadence contract source code from a Flow address, optionally recursing into all imported dependencies',
+    {
+      address: z.string().describe('Flow address (0x...) to fetch contracts from'),
+      network: networkSchema,
+      recurse: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Recursively fetch imported dependency contracts (default: true)'),
+    },
+    async ({ address, network, recurse }) => {
+      try {
+        const tree = await fetchContractSource(address, network, recurse);
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(tree, null, 2),
+            },
+          ],
+        };
+      } catch (e: any) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: `Error fetching contracts: ${e.message}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    'cadence_security_scan',
+    'Run static security analysis rules on Cadence source code. Returns structured findings with severity levels.',
+    {
+      code: z.string().describe('Cadence source code to scan'),
+      network: networkSchema,
+    },
+    async ({ code, network }) => {
+      // Run static security scan
+      const scanResult = securityScan(code);
+      const parts: string[] = [formatScanResult(scanResult)];
+
+      // Also run LSP type-check if available
+      if (lspManager) {
+        try {
+          const diagnostics = await lspManager.checkCode(code, network);
+          const diagText = CadenceLSPClient.formatDiagnostics(diagnostics);
+          parts.push('', '## Type Check (LSP)', diagText);
+        } catch (e: any) {
+          parts.push('', '## Type Check (LSP)', `LSP check failed: ${e.message}`);
+        }
+      }
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: parts.join('\n'),
+          },
+        ],
+      };
+    },
+  );
 
   return server;
 }
