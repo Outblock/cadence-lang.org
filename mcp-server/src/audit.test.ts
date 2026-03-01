@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { securityScan, formatScanResult, type ScanResult } from './audit.js';
+import { securityScan, formatScanResult, fetchContractSource, type ScanResult, type AccountContractFetcher } from './audit.js';
 
 describe('securityScan', () => {
   it('detects access(all) on state fields', () => {
@@ -118,6 +118,129 @@ let y = something!
     const counts = { high: 0, medium: 0, low: 0, info: 0 };
     for (const f of result.findings) counts[f.severity]++;
     expect(result.summary).toEqual(counts);
+  });
+});
+
+// --- fetchContractSource with mock fetcher ---
+
+describe('fetchContractSource (dependency graph)', () => {
+  // Mock contract sources: A imports B and C, B imports C, C has no imports
+  const MOCK_CONTRACTS: Record<string, { name: string; source: string }[]> = {
+    '0xAAAA': [
+      {
+        name: 'ContractA',
+        source: `
+import ContractB from 0xBBBB
+import ContractC from 0xCCCC
+
+access(all) contract ContractA {
+  init() {}
+}`,
+      },
+    ],
+    '0xBBBB': [
+      {
+        name: 'ContractB',
+        source: `
+import ContractC from 0xCCCC
+
+access(all) contract ContractB {
+  init() {}
+}`,
+      },
+    ],
+    '0xCCCC': [
+      {
+        name: 'ContractC',
+        source: `
+access(all) contract ContractC {
+  init() {}
+}`,
+      },
+    ],
+  };
+
+  const mockFetcher: AccountContractFetcher = async (address) => {
+    return MOCK_CONTRACTS[address] ?? [];
+  };
+
+  it('fetches target contracts without recursion', async () => {
+    const tree = await fetchContractSource('0xAAAA', 'mainnet', { recurse: false, fetcher: mockFetcher });
+    expect(tree.target).toBe('0xAAAA');
+    expect(tree.contracts).toHaveLength(1);
+    expect(tree.contracts[0].name).toBe('ContractA');
+    expect(tree.contracts[0].imports).toEqual(['0xBBBB.ContractB', '0xCCCC.ContractC']);
+  });
+
+  it('recursively fetches all dependency contracts', async () => {
+    const tree = await fetchContractSource('0xAAAA', 'mainnet', { recurse: true, fetcher: mockFetcher });
+    expect(tree.contracts).toHaveLength(3);
+    const names = tree.contracts.map((c) => c.name).sort();
+    expect(names).toEqual(['ContractA', 'ContractB', 'ContractC']);
+  });
+
+  it('deduplicates shared dependencies (C imported by both A and B)', async () => {
+    const fetchCount: Record<string, number> = {};
+    const countingFetcher: AccountContractFetcher = async (address, network) => {
+      fetchCount[address] = (fetchCount[address] ?? 0) + 1;
+      return mockFetcher(address, network);
+    };
+
+    await fetchContractSource('0xAAAA', 'mainnet', { recurse: true, fetcher: countingFetcher });
+    // 0xCCCC should only be fetched once despite A and B both importing it
+    expect(fetchCount['0xCCCC']).toBe(1);
+    expect(fetchCount['0xAAAA']).toBe(1);
+    expect(fetchCount['0xBBBB']).toBe(1);
+  });
+
+  it('handles circular dependencies without infinite loop', async () => {
+    const circularContracts: Record<string, { name: string; source: string }[]> = {
+      '0x1111': [
+        { name: 'Alpha', source: 'import Beta from 0x2222\naccess(all) contract Alpha {}' },
+      ],
+      '0x2222': [
+        { name: 'Beta', source: 'import Alpha from 0x1111\naccess(all) contract Beta {}' },
+      ],
+    };
+    const circularFetcher: AccountContractFetcher = async (address) => circularContracts[address] ?? [];
+
+    const tree = await fetchContractSource('0x1111', 'mainnet', { recurse: true, fetcher: circularFetcher });
+    expect(tree.contracts).toHaveLength(2);
+    const names = tree.contracts.map((c) => c.name).sort();
+    expect(names).toEqual(['Alpha', 'Beta']);
+  });
+
+  it('handles account with multiple contracts', async () => {
+    const multiContracts: Record<string, { name: string; source: string }[]> = {
+      '0xMULTI': [
+        { name: 'TokenA', source: 'access(all) contract TokenA {}' },
+        { name: 'TokenB', source: 'access(all) contract TokenB {}' },
+      ],
+    };
+    const multiFetcher: AccountContractFetcher = async (address) => multiContracts[address] ?? [];
+
+    const tree = await fetchContractSource('0xMULTI', 'mainnet', { recurse: true, fetcher: multiFetcher });
+    expect(tree.contracts).toHaveLength(2);
+    expect(tree.contracts[0].address).toBe('0xMULTI');
+    expect(tree.contracts[1].address).toBe('0xMULTI');
+  });
+
+  it('handles address with no contracts', async () => {
+    const emptyFetcher: AccountContractFetcher = async () => [];
+    const tree = await fetchContractSource('0xEMPTY', 'mainnet', { recurse: true, fetcher: emptyFetcher });
+    expect(tree.contracts).toHaveLength(0);
+    expect(tree.target).toBe('0xEMPTY');
+  });
+
+  it('normalizes address without 0x prefix', async () => {
+    const tree = await fetchContractSource('AAAA', 'mainnet', { recurse: false, fetcher: mockFetcher });
+    expect(tree.target).toBe('0xAAAA');
+    expect(tree.contracts).toHaveLength(1);
+  });
+
+  it('records correct import references', async () => {
+    const tree = await fetchContractSource('0xBBBB', 'mainnet', { recurse: false, fetcher: mockFetcher });
+    expect(tree.contracts[0].imports).toEqual(['0xCCCC.ContractC']);
   });
 });
 

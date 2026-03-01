@@ -58,29 +58,29 @@ export async function fetchAccountContracts(
   const data = JSON.parse(stdout);
   const contracts: { name: string; source: string }[] = [];
 
-  // The Flow CLI JSON output has a "contracts" field: { "ContractName": "base64 or raw source" }
-  if (data.contracts) {
-    for (const [name, codeValue] of Object.entries(data.contracts)) {
-      let source: string;
-      if (typeof codeValue === 'string') {
-        // Try base64 decode; if it fails, treat as raw source
-        try {
-          source = Buffer.from(codeValue, 'base64').toString('utf-8');
-          // Heuristic: if decoded text has a lot of non-printable chars, it's probably raw
-          if (/[\x00-\x08\x0e-\x1f]/.test(source.slice(0, 200))) {
-            source = codeValue;
-          }
-        } catch {
-          source = codeValue;
-        }
-      } else {
-        source = String(codeValue);
-      }
-      contracts.push({ name, source });
+  // Flow CLI JSON output uses "code" field: { "code": { "ContractName": "source" } }
+  // Fall back to "contracts" for potential future CLI versions
+  const codeMap = data.code ?? data.contracts;
+  if (codeMap && typeof codeMap === 'object') {
+    for (const [name, codeValue] of Object.entries(codeMap)) {
+      contracts.push({ name, source: String(codeValue) });
     }
   }
 
   return contracts;
+}
+
+/** Function signature for fetching contracts from an address (injectable for testing) */
+export type AccountContractFetcher = (
+  address: string,
+  network: FlowNetwork,
+) => Promise<{ name: string; source: string }[]>;
+
+export interface FetchContractSourceOptions {
+  recurse?: boolean;
+  flowCommand?: string;
+  /** Override the default fetcher (for testing) */
+  fetcher?: AccountContractFetcher;
 }
 
 /**
@@ -89,9 +89,21 @@ export async function fetchAccountContracts(
 export async function fetchContractSource(
   address: string,
   network: FlowNetwork,
-  recurse = true,
+  optionsOrRecurse: boolean | FetchContractSourceOptions = true,
   flowCommand = 'flow',
 ): Promise<ContractTree> {
+  // Support legacy (address, network, recurse, flowCommand) signature
+  let recurse: boolean;
+  let fetcher: AccountContractFetcher;
+  if (typeof optionsOrRecurse === 'boolean') {
+    recurse = optionsOrRecurse;
+    fetcher = (addr, net) => fetchAccountContracts(addr, net, flowCommand);
+  } else {
+    recurse = optionsOrRecurse.recurse ?? true;
+    const cmd = optionsOrRecurse.flowCommand ?? flowCommand;
+    fetcher = optionsOrRecurse.fetcher ?? ((addr, net) => fetchAccountContracts(addr, net, cmd));
+  }
+
   const visited = new Set<string>(); // "0xAddress" already fetched
   const allContracts: ContractInfo[] = [];
   const queue: string[] = [normalizeAddress(address)];
@@ -101,7 +113,7 @@ export async function fetchContractSource(
     if (visited.has(addr)) continue;
     visited.add(addr);
 
-    const accountContracts = await fetchAccountContracts(addr, network, flowCommand);
+    const accountContracts = await fetcher(addr, network);
 
     for (const { name, source } of accountContracts) {
       const imports = extractAddressImports(source);
