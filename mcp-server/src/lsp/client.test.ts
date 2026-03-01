@@ -152,8 +152,11 @@ describe('CadenceLSPClient.formatSymbols', () => {
 // ─── Import helpers ───
 
 describe('hasAddressImports', () => {
-  it('detects address imports', () => {
+  it('detects single-name address imports', () => {
     expect(hasAddressImports('import FungibleToken from 0xf233dcee88fe0abe')).toBe(true);
+  });
+  it('detects multi-name address imports', () => {
+    expect(hasAddressImports('import TopShotMarketV3, Market from 0xc1e4f4f4c4257510')).toBe(true);
   });
   it('returns false for string imports', () => {
     expect(hasAddressImports('import "FungibleToken"')).toBe(false);
@@ -161,20 +164,53 @@ describe('hasAddressImports', () => {
 });
 
 describe('extractAddressImports', () => {
-  it('extracts all address imports', () => {
+  it('extracts single-name address imports', () => {
     const code = 'import FungibleToken from 0xf233dcee88fe0abe\nimport NonFungibleToken from 0x1d7e57aa55817448';
     const imports = extractAddressImports(code);
     expect(imports).toHaveLength(2);
     expect(imports[0]).toEqual({ name: 'FungibleToken', address: 'f233dcee88fe0abe' });
     expect(imports[1]).toEqual({ name: 'NonFungibleToken', address: '1d7e57aa55817448' });
   });
+
+  it('extracts multi-name address imports', () => {
+    const code = 'import TopShotMarketV3, Market from 0xc1e4f4f4c4257510';
+    const imports = extractAddressImports(code);
+    expect(imports).toHaveLength(2);
+    expect(imports[0]).toEqual({ name: 'TopShotMarketV3', address: 'c1e4f4f4c4257510' });
+    expect(imports[1]).toEqual({ name: 'Market', address: 'c1e4f4f4c4257510' });
+  });
+
+  it('handles mix of single and multi-name imports', () => {
+    const code = `import FungibleToken from 0xf233dcee88fe0abe
+import TopShotMarketV3, Market from 0xc1e4f4f4c4257510
+import NonFungibleToken from 0x1d7e57aa55817448`;
+    const imports = extractAddressImports(code);
+    expect(imports).toHaveLength(4);
+    expect(imports.map(i => i.name)).toEqual([
+      'FungibleToken', 'TopShotMarketV3', 'Market', 'NonFungibleToken',
+    ]);
+  });
+
+  it('handles three or more names in one import', () => {
+    const code = 'import A, B, C from 0xABCD1234ABCD1234';
+    const imports = extractAddressImports(code);
+    expect(imports).toHaveLength(3);
+    expect(imports.map(i => i.name)).toEqual(['A', 'B', 'C']);
+    expect(imports.every(i => i.address === 'ABCD1234ABCD1234')).toBe(true);
+  });
 });
 
 describe('rewriteToStringImports', () => {
-  it('rewrites address imports to string imports', () => {
+  it('rewrites single-name address imports', () => {
     const code = 'import FungibleToken from 0xf233dcee88fe0abe\n\naccess(all) fun main() {}';
     const result = rewriteToStringImports(code);
     expect(result).toBe('import "FungibleToken"\n\naccess(all) fun main() {}');
+  });
+
+  it('rewrites multi-name address imports to separate string imports', () => {
+    const code = 'import TopShotMarketV3, Market from 0xc1e4f4f4c4257510';
+    const result = rewriteToStringImports(code);
+    expect(result).toBe('import "TopShotMarketV3"\nimport "Market"');
   });
 });
 
