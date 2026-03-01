@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { searchDocs, getDoc, docsAvailable, browseDoc } from './search.js';
 import { CadenceLSPClient, LSPManager, VALID_NETWORKS, type FlowNetwork } from './lsp/client.js';
-import { fetchContractSource, securityScan, formatScanResult } from './audit.js';
+import { fetchContractSource, toManifest, fetchSingleContractCode, securityScan, formatScanResult } from './audit.js';
 
 const networkSchema = z
   .enum(VALID_NETWORKS)
@@ -231,7 +231,7 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
 
   server.tool(
     'get_contract_source',
-    'Fetch on-chain Cadence contract source code from a Flow address, optionally recursing into all imported dependencies',
+    'Fetch on-chain contract manifest from a Flow address: lists all contracts with names, sizes, imports, and dependency graph. Does NOT include source code — use get_contract_code to fetch individual contract source.',
     {
       address: z.string().describe('Flow address (0x...) to fetch contracts from'),
       network: networkSchema,
@@ -244,11 +244,12 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
     async ({ address, network, recurse }) => {
       try {
         const tree = await fetchContractSource(address, network, recurse);
+        const manifest = toManifest(tree);
         return {
           content: [
             {
               type: 'text' as const,
-              text: JSON.stringify(tree, null, 2),
+              text: JSON.stringify(manifest, null, 2),
             },
           ],
         };
@@ -258,6 +259,40 @@ export async function createServer(lspOrManager?: CadenceLSPClient | LSPManager)
             {
               type: 'text' as const,
               text: `Error fetching contracts: ${e.message}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    'get_contract_code',
+    'Fetch the source code of a specific contract from a Flow address. Use get_contract_source first to discover contract names.',
+    {
+      address: z.string().describe('Flow address (0x...) that holds the contract'),
+      contract_name: z.string().optional().describe('Name of the contract to fetch. If omitted, returns all contracts on the address.'),
+      network: networkSchema,
+    },
+    async ({ address, contract_name, network }) => {
+      try {
+        const contracts = await fetchSingleContractCode(address, network, contract_name);
+        const parts = contracts.map((c) => `// === ${c.name} (${address}) ===\n\n${c.source}`);
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: parts.join('\n\n'),
+            },
+          ],
+        };
+      } catch (e: any) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: `Error fetching contract code: ${e.message}`,
             },
           ],
           isError: true,

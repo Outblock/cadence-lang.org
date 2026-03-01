@@ -10,10 +10,26 @@ export interface ContractInfo {
   imports: string[]; // "0xAddress.ContractName" references
 }
 
+/** Lightweight manifest entry (no source code) for dependency graph overview */
+export interface ContractManifestEntry {
+  name: string;
+  address: string;
+  size: number; // source code length in chars
+  imports: string[];
+}
+
 export interface ContractTree {
   target: string; // address queried
   network: FlowNetwork;
   contracts: ContractInfo[];
+}
+
+/** Manifest-only tree (no source code, suitable for LLM overview) */
+export interface ContractManifest {
+  target: string;
+  network: FlowNetwork;
+  contracts: ContractManifestEntry[];
+  totalSize: number;
 }
 
 export type Severity = 'high' | 'medium' | 'low' | 'info';
@@ -138,6 +154,37 @@ export async function fetchContractSource(
   }
 
   return { target: normalizeAddress(address), network, contracts: allContracts };
+}
+
+/** Convert a full ContractTree to a lightweight manifest (strips source code) */
+export function toManifest(tree: ContractTree): ContractManifest {
+  let totalSize = 0;
+  const contracts: ContractManifestEntry[] = tree.contracts.map((c) => {
+    totalSize += c.source.length;
+    return { name: c.name, address: c.address, size: c.source.length, imports: c.imports };
+  });
+  return { target: tree.target, network: tree.network, contracts, totalSize };
+}
+
+/**
+ * Fetch source code for a single contract by address.
+ * If `contractName` is provided, returns only that contract; otherwise all contracts on the address.
+ */
+export async function fetchSingleContractCode(
+  address: string,
+  network: FlowNetwork,
+  contractName?: string,
+  flowCommand = 'flow',
+): Promise<{ name: string; source: string }[]> {
+  const all = await fetchAccountContracts(normalizeAddress(address), network, flowCommand);
+  if (contractName) {
+    const match = all.filter((c) => c.name === contractName);
+    if (match.length === 0) {
+      throw new Error(`Contract '${contractName}' not found on ${address}. Available: ${all.map((c) => c.name).join(', ')}`);
+    }
+    return match;
+  }
+  return all;
 }
 
 function normalizeAddress(addr: string): string {

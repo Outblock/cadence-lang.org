@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { securityScan, formatScanResult, fetchContractSource, type ScanResult, type AccountContractFetcher } from './audit.js';
+import { securityScan, formatScanResult, fetchContractSource, toManifest, type ScanResult, type AccountContractFetcher } from './audit.js';
 
 describe('securityScan', () => {
   it('detects access(all) on state fields', () => {
@@ -241,6 +241,39 @@ access(all) contract ContractC {
   it('records correct import references', async () => {
     const tree = await fetchContractSource('0xBBBB', 'mainnet', { recurse: false, fetcher: mockFetcher });
     expect(tree.contracts[0].imports).toEqual(['0xCCCC.ContractC']);
+  });
+});
+
+describe('toManifest', () => {
+  it('strips source code and includes size', async () => {
+    const mockFetcher: AccountContractFetcher = async (address) => {
+      if (address === '0xAAAA') {
+        return [{ name: 'MyContract', source: 'access(all) contract MyContract { init() {} }' }];
+      }
+      return [];
+    };
+    const tree = await fetchContractSource('0xAAAA', 'mainnet', { recurse: false, fetcher: mockFetcher });
+    const manifest = toManifest(tree);
+
+    expect(manifest.target).toBe('0xAAAA');
+    expect(manifest.contracts).toHaveLength(1);
+    expect(manifest.contracts[0].name).toBe('MyContract');
+    expect(manifest.contracts[0].size).toBe(45);
+    expect(manifest.contracts[0]).not.toHaveProperty('source');
+    expect(manifest.totalSize).toBe(45);
+  });
+
+  it('calculates totalSize across all contracts', async () => {
+    const mockFetcher: AccountContractFetcher = async () => [
+      { name: 'A', source: '1234567890' }, // 10 chars
+      { name: 'B', source: '12345' },       // 5 chars
+    ];
+    const tree = await fetchContractSource('0xTEST', 'mainnet', { recurse: false, fetcher: mockFetcher });
+    const manifest = toManifest(tree);
+
+    expect(manifest.totalSize).toBe(15);
+    expect(manifest.contracts[0].size).toBe(10);
+    expect(manifest.contracts[1].size).toBe(5);
   });
 });
 
