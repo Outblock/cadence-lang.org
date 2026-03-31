@@ -85,9 +85,9 @@ npx @outblock/cadence-mcp
 
 | Agent | Setup |
 |---|---|
-| **Claude Code** | `npx skills add outblock/cadence-lang.org` + MCP above |
+| **Claude Code** | `npx skills add outblock/cadence-lang.org` + MCP via `claude mcp add` |
 | **Claude Desktop** | MCP config in `claude_desktop_config.json` |
-| **Cursor** | Skills + `.cursor/rules` file + MCP |
+| **Cursor** | Skills + `.cursor/rules` file + MCP (one-click or manual) |
 | **Antigravity** | Skills (auto-reads `SKILL.md`) + MCP config |
 | **OpenCode** | Skills + MCP config |
 | **Codex** | Skills + `AGENTS.md` instructions |
@@ -390,6 +390,7 @@ access(all) contract BasicNFT {
         access(all) let metadata: {String: String}
         init(metadata: {String: String}) {
             self.id = self.uuid
+            self.metadata = metadata
             BasicNFT.totalSupply = BasicNFT.totalSupply + 1
             emit Minted(id: self.id)
         }
@@ -405,7 +406,7 @@ access(all) contract BasicNFT {
 
         access(Withdraw) fun withdraw(id: UInt64): @NFT {
             let token <- self.ownedNFTs.remove(key: id)
-                ?? panic("NFT \(id) not found in collection")
+                ?? panic("NFT ".concat(id.toString()).concat(" not found in collection"))
             emit Withdraw(id: token.id, from: self.owner?.address)
             return <- token
         }
@@ -790,7 +791,7 @@ import "BasicNFT"
 transaction(provider: Address, name: String) {
     prepare(signer: auth(ClaimInboxCapability, SaveValue) &Account) {
         let capability = signer.inbox.claim<&BasicNFT.Minter>(name, provider: provider)
-            ?? panic("No capability named '\(name)' from \(provider)")
+            ?? panic("No capability named '".concat(name).concat("' from ").concat(provider.toString()))
         signer.storage.save(capability, to: BasicNFT.minterPath)
     }
 }
@@ -818,7 +819,8 @@ transaction {
 // GOOD — borrow a reference, mutate in-place, no save needed
 transaction {
     prepare(acct: auth(BorrowValue) &Account) {
-        let vault = acct.storage.borrow<&ExampleToken.Vault>(from: /storage/exampleToken)!
+        let vault = acct.storage.borrow<auth(ExampleToken.Withdraw) &ExampleToken.Vault>(from: /storage/exampleToken)
+            ?? panic("No vault found at /storage/exampleToken")
         let burned <- vault.withdraw(amount: 10)
         destroy burned
     }
@@ -832,43 +834,4 @@ transaction {
 Flow produces blocks approximately every **0.8 seconds**. Both block timestamp and block height are available on-chain.
 
 ```cadence
-let block = getCurrentBlock()
-block.timestamp   // Unix timestamp (UFix64, seconds)
-block.height      // Block number (UInt64)
-
-let pastBlock = getBlock(at: 70001)
-pastBlock?.timestamp
-pastBlock?.height
-```
-
-| Method | Use when |
-|---|---|
-| `getCurrentBlock().timestamp` | Acceptable for events lasting hours/days. Accurate to ~10 seconds. |
-| `getCurrentBlock().height` | More manipulation-resistant. Requires off-chain rate estimation. |
-
-**Rules:**
-- Timestamps cannot go backwards and cannot be more than 10 seconds ahead of the previous block.
-- **Never hardcode an assumed block rate** — it changes over time.
-- Auctions and time-locks should have an **extension mechanism**.
-
----
-
-## 15. Contract Upgrades
-
-### Compatible Changes (Preferred)
-
-Cadence supports in-place upgrades for additive changes: adding new fields (with defaults), new functions, new events. Use `flow contracts update`.
-
-### Incompatible Changes
-
-**Option A — New address (safest):**
-1. Deploy new contract to a **new account**.
-2. Increment path suffixes (`/public/MyVault002`).
-3. Write upgrade transactions to migrate users' resources.
-
-**Option B — Same address (risky, last resort):**
-1. Delete all resources in the contract account (e.g., Admin resource).
-2. Delete the contract from the account.
-3. Deploy the new contract.
-
-> ⚠️ If any user account holds `structs` or `resources` from the old contract version, those will **fail to
+let block = getCurrent
